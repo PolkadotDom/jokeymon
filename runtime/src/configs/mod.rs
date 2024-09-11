@@ -308,3 +308,9 @@ impl pallet_parachain_template::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = pallet_parachain_template::weights::SubstrateWeight<Runtime>;
 }
+
+/// Configure the omni pallet
+impl pallet_omni::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = pallet_omni::weights::SubstrateWeight<Runtime>;
+}

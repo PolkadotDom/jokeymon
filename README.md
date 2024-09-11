@@ -44,13 +44,13 @@ packages required to compile this template - please take note of the Rust compil
 🔨 Use the following command to build the node without launching it:
 
 ```sh
-cargo build --package parachain-template-node --release
+cargo build --package dumb-pokemon-node --release
 ```
 
 🐳 Alternatively, build the docker image:
 
 ```sh
-docker build . -t polkadot-sdk-parachain-template
+docker build . -t polkadot-sdk-dumb-pokemon
 ```
 
 ### Local Development Chain

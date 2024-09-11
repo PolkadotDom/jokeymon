@@ -5,17 +5,18 @@ chain = "rococo-local"
 [[relaychain.nodes]]
 name = "alice"
 validator = true
-ws_port = 9944
+rpc_port = 9944
 
 [[relaychain.nodes]]
 name = "bob"
 validator = true
-ws_port = 9955
+rpc_port = 9955
 
 [[parachains]]
-id = 1000
+id = 2000
+default_command = "./target/debug/dumb-pokemon-node"
 
-[parachains.collator]
+[[parachains.collators]]
 name = "charlie"
-ws_port = 9988
-command = "parachain-template-node"
+rpc_port = 9988
+

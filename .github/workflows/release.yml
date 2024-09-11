@@ -61,5 +61,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            target/release/parachain-template-node
-            target/release/wbuild/parachain-template-runtime/parachain_template_runtime.compact.compressed.wasm
+            target/release/dumb-pokemon-node
+            target/release/wbuild/dumb-pokemon-runtime/dumb_pokemon_runtime.compact.compressed.wasm
