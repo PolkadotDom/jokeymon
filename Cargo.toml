@@ -15,7 +15,7 @@ resolver = "2"
 
 [workspace.dependencies]
 
-dumb-pokemon-runtime = { path = "./runtime", default-features = false }
+jokeymon-runtime = { path = "./runtime", default-features = false }
 pallet-parachain-template = { path = "./pallets/template", default-features = false }
 pallet-omni = { path = "./pallets/omni", default-features = false}
 
@@ -97,6 +97,7 @@ pallet-sudo = { version = "37.0.0", default-features = false }
 pallet-timestamp = { version = "36.0.0", default-features = false }
 pallet-transaction-payment = { version = "37.0.0", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { version = "37.0.0", default-features = false }
+pallet-insecure-randomness-collective-flip = { version = "25.0.0", default-features = false }
 pallet-xcm = { version = "16.0.0", default-features = false }
 parachain-info = { version = "0.16.0", default-features = false, package = "staging-parachain-info" }
 parachains-common = { version = "17.0.0", default-features = false }

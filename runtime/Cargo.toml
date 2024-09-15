@@ -1,5 +1,5 @@
 [package]
-name = "dumb-pokemon-runtime"
+name = "jokeymon-runtime"
 description = "A parachain runtime template built with Substrate and Cumulus, part of Polkadot Sdk. (polkadot v1.15.0)"
 version = "0.1.0"
 license = "Unlicense"
@@ -50,6 +50,7 @@ pallet-sudo.workspace = true
 pallet-timestamp.workspace = true
 pallet-transaction-payment.workspace = true
 pallet-transaction-payment-rpc-runtime-api.workspace = true
+pallet-insecure-randomness-collective-flip.workspace = true
 sp-api.workspace = true
 sp-block-builder.workspace = true
 sp-consensus-aura.workspace = true

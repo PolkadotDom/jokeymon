@@ -61,5 +61,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            target/release/dumb-pokemon-node
-            target/release/wbuild/dumb-pokemon-runtime/dumb_pokemon_runtime.compact.compressed.wasm
+            target/release/jokeymon-node
+            target/release/wbuild/jokeymon-runtime/jokeymon_runtime.compact.compressed.wasm

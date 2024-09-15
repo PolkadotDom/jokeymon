@@ -1,6 +1,6 @@
 [package]
 name = "pallet-omni"
-description = "An omni pallet for dumb pokemon"
+description = "An omni pallet for dumb jokeymon"
 version = "0.1.0"
 license = "Unlicense"
 authors.workspace = true
@@ -23,6 +23,9 @@ frame-benchmarking = { optional = true, workspace = true }
 frame-support.workspace = true
 frame-system.workspace = true
 sp-runtime.workspace = true
+
+# pallets
+pallet-insecure-randomness-collective-flip.workspace = true
 
 [dev-dependencies]
 sp-core = { default-features = true, workspace = true }

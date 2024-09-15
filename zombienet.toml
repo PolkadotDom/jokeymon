@@ -14,7 +14,7 @@ rpc_port = 9955
 
 [[parachains]]
 id = 2000
-default_command = "./target/debug/dumb-pokemon-node"
+default_command = "./target/debug/jokeymon-node"
 
 [[parachains.collators]]
 name = "charlie"
