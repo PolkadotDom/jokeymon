@@ -4468,7 +4468,6 @@ dependencies = [
  "pallet-insecure-randomness-collective-flip",
  "pallet-message-queue",
  "pallet-omni",
- "pallet-parachain-template",
  "pallet-session",
  "pallet-sudo",
  "pallet-timestamp",

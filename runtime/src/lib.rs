@@ -37,9 +37,6 @@ pub use sp_runtime::BuildStorage;
 
 use weights::ExtrinsicBaseWeight;
 
-/// Import the template pallet.
-pub use pallet_parachain_template;
-
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
 
@@ -303,12 +300,10 @@ mod runtime {
     pub type MessageQueue = pallet_message_queue;
 
     // Mine
-    #[runtime::pallet_index(50)]
-    pub type TemplatePallet = pallet_parachain_template;
-    #[runtime::pallet_index(51)]
-    pub type OmniPallet = pallet_omni;
-    #[runtime::pallet_index(52)]
+    #[runtime::pallet_index(34)]
     pub type RandomPallet = pallet_insecure_randomness_collective_flip;
+    #[runtime::pallet_index(35)]
+    pub type OmniPallet = pallet_omni;
 }
 
 #[docify::export(register_validate_block)]
