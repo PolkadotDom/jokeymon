@@ -1,23 +1,32 @@
-use crate::{mock::*, Error, Something};
-use frame_support::{assert_noop, assert_ok};
+use crate::{mock::*, pallet as OmniPallet};
+use frame_support::traits::OnInitialize;
+use sp_runtime::traits::Header;
 
-#[test]
-fn it_works_for_default_value() {
-    new_test_ext().execute_with(|| {
-        // Dispatch a signed extrinsic.
-        assert_ok!(TemplateModule::do_something(RuntimeOrigin::signed(1), 42));
-        // Read pallet storage and assert an expected result.
-        assert_eq!(Something::<Test>::get().map(|v| v.block_number), Some(42));
-    });
+//fast forward so that randomness can be used
+fn setup_blocks(blocks: u64) {
+    let mut parent_hash = System::parent_hash();
+
+    for i in 1..(blocks + 1) {
+        System::reset_events();
+        System::initialize(&i, &parent_hash, &Default::default());
+        RandomModule::on_initialize(i);
+
+        let header = System::finalize();
+        parent_hash = header.hash();
+        System::set_block_number(*header.number());
+    }
 }
 
 #[test]
-fn correct_error_for_none_value() {
+fn random_nonce_is_updated() {
     new_test_ext().execute_with(|| {
-        // Ensure the expected error is thrown when no value is present.
-        assert_noop!(
-            TemplateModule::cause_error(RuntimeOrigin::signed(1)),
-            Error::<Test>::NoneValue
-        );
+        //fast forward for randomness
+        setup_blocks(81);
+        // Check nonce value
+        assert_eq!(OmniPallet::RandomNonce::<Test>::get(), 0);
+        // Dispatch catch extrinsic
+        let _ = OmniModule::catch_jokeymon(RuntimeOrigin::signed(1));
+        // Check nonce again
+        assert_eq!(OmniPallet::RandomNonce::<Test>::get(), 1);
     });
 }

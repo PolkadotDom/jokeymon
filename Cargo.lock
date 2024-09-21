@@ -7076,6 +7076,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "log",
  "pallet-insecure-randomness-collective-flip",
  "parity-scale-codec",
  "scale-info",

@@ -309,9 +309,14 @@ impl pallet_parachain_template::Config for Runtime {
     type WeightInfo = pallet_parachain_template::weights::SubstrateWeight<Runtime>;
 }
 
+parameter_types! {
+	pub const MaxJokeymonInRegion : u32 = 50;
+}
+
 /// Configure the omni pallet
 impl pallet_omni::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type WeightInfo = pallet_omni::weights::SubstrateWeight<Runtime>;
     type RandomSource = RandomPallet;
+	type MaxJokeymonInRegion = MaxJokeymonInRegion;
 }

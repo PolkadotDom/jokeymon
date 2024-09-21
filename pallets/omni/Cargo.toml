@@ -27,6 +27,9 @@ sp-runtime.workspace = true
 # pallets
 pallet-insecure-randomness-collective-flip.workspace = true
 
+# utilities
+log.workspace = true
+
 [dev-dependencies]
 sp-core = { default-features = true, workspace = true }
 sp-io = { default-features = true, workspace = true }
