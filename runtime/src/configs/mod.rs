@@ -307,7 +307,7 @@ impl pallet_collator_selection::Config for Runtime {
 impl pallet_insecure_randomness_collective_flip::Config for Runtime {}
 
 parameter_types! {
-	pub const MaxJokeymonInRegion : u32 = 50;
+    pub const MaxJokeymonInRegion : u32 = 50;
 }
 
 /// Configure the omni pallet
@@ -315,5 +315,5 @@ impl pallet_omni::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type WeightInfo = pallet_omni::weights::SubstrateWeight<Runtime>;
     type RandomSource = RandomPallet;
-	type MaxJokeymonInRegion = MaxJokeymonInRegion;
+    type MaxJokeymonInRegion = MaxJokeymonInRegion;
 }

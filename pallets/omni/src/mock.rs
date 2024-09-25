@@ -1,5 +1,5 @@
 use frame_support::{derive_impl, parameter_types, weights::constants::RocksDbWeight};
-use frame_system::{mocking::MockBlock, GenesisConfig};
+use frame_system::mocking::MockBlock;
 use sp_runtime::{traits::ConstU64, BuildStorage};
 
 // Configure a mock runtime to test the pallet.
@@ -38,20 +38,34 @@ impl frame_system::Config for Test {
 impl pallet_insecure_randomness_collective_flip::Config for Test {}
 
 parameter_types! {
-	pub const MaxJokeymonInRegion : u32 = 50;
+    pub const MaxJokeymonInRegion : u32 = 50;
 }
 
 impl crate::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type WeightInfo = ();
     type RandomSource = RandomModule;
-	type MaxJokeymonInRegion = MaxJokeymonInRegion;
+    type MaxJokeymonInRegion = MaxJokeymonInRegion;
 }
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-    GenesisConfig::<Test>::default()
+    // crate::GenesisConfig::<Test>::default()
+    //     .build_storage()
+    //     .unwrap()
+    //     .into()
+
+    let t = RuntimeGenesisConfig::default()
         .build_storage()
         .unwrap()
-        .into()
+        .into();
+    let mut ext = sp_io::TestExternalities::new(t);
+    ext.execute_with(|| System::set_block_number(1));
+    ext
+
+    // let mut t = frame_system::GenesisConfig::<TestRuntime>::default().build_storage().unwrap();
+    // pallet_balances::GenesisConfig::<TestRuntime> { balances: vec![(ENDOWED_ACCOUNT, 1_000_000)] }
+    // 	.assimilate_storage(&mut t)
+    // 	.unwrap();
+    // sp_io::TestExternalities::new(t)
 }

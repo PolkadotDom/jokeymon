@@ -22,6 +22,9 @@
 //   Update jokeymon region population dynamics
 //   Update players food resources & jokeymon
 
+// Next
+// how does parameterization with the chain_spec work (see open tab)
+
 pub use pallet::*;
 
 mod types;
@@ -47,7 +50,9 @@ mod benchmarking;
 pub mod pallet {
     use crate::types::*;
     use frame_support::{
-        dispatch::DispatchResultWithPostInfo, pallet_prelude::*, traits::Randomness,
+        dispatch::DispatchResultWithPostInfo,
+        pallet_prelude::*,
+        traits::{BuildGenesisConfig, Randomness},
         Blake2_128Concat,
     };
     use frame_system::pallet_prelude::*;
@@ -66,8 +71,8 @@ pub mod pallet {
         /// A source of randomness
         type RandomSource: Randomness<Self::Hash, BlockNumberFor<Self>>;
 
-		/// Maximum amount of Jokeymon allowed in a region
-		type MaxJokeymonInRegion: Get<u32>;
+        /// Maximum amount of Jokeymon allowed in a region
+        type MaxJokeymonInRegion: Get<u32>;
     }
 
     #[pallet::pallet]
@@ -86,6 +91,29 @@ pub mod pallet {
     #[pallet::storage]
     pub type AccountToData<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, AccountData, ValueQuery>;
+
+    /// Genesis Storage
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config> {
+        pub _marker: core::marker::PhantomData<T>,
+        pub randomnonce: u32,
+    }
+
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            Self {
+                _marker: core::marker::PhantomData::<T>::default(),
+                randomnonce: 0,
+            }
+        }
+    }
+
+    #[pallet::genesis_build]
+    impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
+        fn build(&self) {
+            RandomNonce::<T>::put(0);
+        }
+    }
 
     /// Pallets use events to inform users when important changes are made.
     /// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/your_first_pallet/index.html#event-and-error>
