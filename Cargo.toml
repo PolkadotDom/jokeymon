@@ -9,7 +9,6 @@ edition = "2021"
 members = [
     "node",
     "pallets/omni",
-    "pallets/randomness",
     "runtime",
 ]
 resolver = "2"
@@ -19,7 +18,6 @@ resolver = "2"
 jokeymon-runtime = { path = "./runtime", default-features = false }
 pallet-parachain-template = { path = "./pallets/template", default-features = false }
 pallet-omni = { path = "./pallets/omni", default-features = false}
-pallet-insecure-randomness-collective-flip = { path = "./pallets/randomness", default-features = false }
 
 clap = { version = "4.5.3" }
 codec = { version = "3.6.12", default-features = false, package = "parity-scale-codec" }
@@ -43,7 +41,6 @@ pallet-transaction-payment-rpc = { version = "40.0.0", default-features = false 
 polkadot-cli = { version = "17.0.0", default-features = false }
 polkadot-primitives = { version = "15.0.0", default-features = false }
 prometheus-endpoint = { version = "0.17.0", default-features = false, package = "substrate-prometheus-endpoint" }
-safe-mix = { version = "1.0", default-features = false }
 sc-basic-authorship = { version = "0.44.0", default-features = false }
 sc-chain-spec = { version = "37.0.0", default-features = false }
 sc-cli = { version = "0.46.0", default-features = false }
@@ -94,6 +91,7 @@ pallet-aura = { version = "36.0.0", default-features = false }
 pallet-authorship = { version = "37.0.0", default-features = false }
 pallet-balances = { version = "38.0.0", default-features = false }
 pallet-collator-selection = { version = "18.0.0", default-features = false }
+pallet-insecure-randomness-collective-flip = { version = "25.0.0", default-features = false }
 pallet-message-queue = { version = "40.0.0", default-features = false }
 pallet-session = { version = "37.0.0", default-features = false }
 pallet-sudo = { version = "37.0.0", default-features = false }
