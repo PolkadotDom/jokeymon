@@ -29,6 +29,7 @@ pallet-insecure-randomness-collective-flip.workspace = true
 
 # utilities
 log.workspace = true
+serde.workspace = true
 
 [dev-dependencies]
 sp-core = { default-features = true, workspace = true }

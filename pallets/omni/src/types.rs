@@ -28,6 +28,8 @@ pub type FindRate = u16;
     TypeInfo,
     MaxEncodedLen,
     Default,
+    serde::Serialize,
+    serde::Deserialize,
 )]
 pub struct Region {
     pub id: RegionId,
@@ -48,6 +50,8 @@ pub struct Region {
     TypeInfo,
     MaxEncodedLen,
     DefaultNoBound,
+    serde::Serialize,
+    serde::Deserialize,
 )]
 #[scale_info(skip_type_params(T))]
 pub struct Chances<T: crate::Config> {
@@ -68,6 +72,8 @@ pub struct Chances<T: crate::Config> {
     TypeInfo,
     MaxEncodedLen,
     Default,
+    serde::Serialize,
+    serde::Deserialize,
 )]
 pub struct AccountData {
     pub current_region: RegionId,

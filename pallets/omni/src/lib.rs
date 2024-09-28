@@ -23,11 +23,11 @@
 //   Update players food resources & jokeymon
 
 // Next
-// how does parameterization with the chain_spec work (see open tab)
+// does the chainspec parameterization follow to the test externatility?
 
 pub use pallet::*;
 
-mod types;
+pub mod types;
 
 #[cfg(test)]
 mod mock;
@@ -85,7 +85,7 @@ pub mod pallet {
     /// Region to jokeymon chances
     #[pallet::storage]
     pub type RegionToChances<T: Config> =
-        StorageMap<_, Blake2_128Concat, Region, Chances<T>, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, RegionId, Chances<T>, ValueQuery>;
 
     /// Account to user data
     #[pallet::storage]
@@ -95,15 +95,13 @@ pub mod pallet {
     /// Genesis Storage
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
-        pub _marker: core::marker::PhantomData<T>,
-        pub randomnonce: u32,
+        pub region_to_chances: Vec<(RegionId, Chances<T>)>,
     }
 
     impl<T: Config> Default for GenesisConfig<T> {
         fn default() -> Self {
             Self {
-                _marker: core::marker::PhantomData::<T>::default(),
-                randomnonce: 0,
+                region_to_chances : Default::default(),
             }
         }
     }
@@ -111,7 +109,9 @@ pub mod pallet {
     #[pallet::genesis_build]
     impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
         fn build(&self) {
-            RandomNonce::<T>::put(0);
+            for (a,b) in &self.region_to_chances {
+                RegionToChances::<T>::insert(a, b);
+            }
         }
     }
 

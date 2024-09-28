@@ -1,6 +1,4 @@
 use crate::{mock::*, pallet as OmniPallet};
-use frame_support::traits::OnInitialize;
-use sp_runtime::traits::Header;
 
 #[test]
 fn random_nonce_is_updated() {
@@ -17,6 +15,6 @@ fn random_nonce_is_updated() {
 #[test]
 fn check_nonce_value() {
     new_test_ext().execute_with(|| {
-        assert_eq!(OmniPallet::RandomNonce::<Test>::get(), 1);
+        assert_eq!(OmniPallet::RandomNonce::<Test>::get(), 0);
     });
 }

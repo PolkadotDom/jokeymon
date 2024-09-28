@@ -1,11 +1,12 @@
 use cumulus_primitives_core::ParaId;
 use jokeymon_runtime as runtime;
-use runtime::{AccountId, AuraId, Signature, EXISTENTIAL_DEPOSIT};
+use runtime::{AccountId, AuraId, Signature, EXISTENTIAL_DEPOSIT, Runtime as JokeymonRuntime};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
-use sp_runtime::traits::{IdentifyAccount, Verify};
+use sp_runtime::{traits::{IdentifyAccount, Verify}, BoundedVec};
+use pallet_omni::types::Chances;
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<Extensions>;
@@ -197,6 +198,22 @@ fn testnet_genesis(
         "polkadotXcm": {
             "safeXcmVersion": Some(SAFE_XCM_VERSION),
         },
-        "sudo": { "key": Some(root) }
+        "sudo": { "key": Some(root) },
+        "omniPallet": {
+            "regionToChances": vec![
+                (0u16, Chances::<JokeymonRuntime> {
+                    jokeymon_ids : BoundedVec::try_from(vec![0u16, 1u16, 2u16]).expect("messed up region to chances genesis"),
+                    jokeymon_rates : BoundedVec::try_from(vec![100u16, 200u16, 300u16]).expect("messed up region to chances genesis")
+                }),
+                // (1u16, Chances {
+                //     jokeymon_ids : BoundedVec::try_from(vec![1u16]),
+                //     jokeymon_rates : BoundedVec::try_from(vec![1u16])
+                // }),
+                // (2u16, Chances {
+                //     jokeymon_ids : BoundedVec::try_from(vec![1u16]),
+                //     jokeymon_rates : BoundedVec::try_from(vec![1u16])
+                // }),
+                ]
+        }
     })
 }
