@@ -15,6 +15,8 @@ fn random_nonce_is_updated() {
 #[test]
 fn check_nonce_value() {
     new_test_ext().execute_with(|| {
-        assert_eq!(OmniPallet::RandomNonce::<Test>::get(), 0);
+        let x = OmniPallet::RegionToChances::<Test>::get(0u16);
+        println!("{:?}", x.jokeymon_ids.to_vec());
+        assert_eq!(1, 0);
     });
 }

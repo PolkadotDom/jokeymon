@@ -23,7 +23,6 @@
 //   Update players food resources & jokeymon
 
 // Next
-// does the chainspec parameterization follow to the test externatility?
 
 pub use pallet::*;
 
@@ -101,7 +100,10 @@ pub mod pallet {
     impl<T: Config> Default for GenesisConfig<T> {
         fn default() -> Self {
             Self {
-                region_to_chances : Default::default(),
+                region_to_chances : vec![(0u16, Chances::<T> {
+                    jokeymon_ids : BoundedVec::try_from(vec![0u16, 1u16, 2u16]).expect("messed up region to chances genesis"),
+                    jokeymon_rates : BoundedVec::try_from(vec![100u16, 200u16, 300u16]).expect("messed up region to chances genesis")
+                })],
             }
         }
     }
