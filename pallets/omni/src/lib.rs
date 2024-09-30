@@ -23,6 +23,7 @@
 //   Update players food resources & jokeymon
 
 // Next
+// Convert rates to permill, from_parts, from_percent, from_rational, probs use from_percenty
 
 pub use pallet::*;
 
@@ -55,7 +56,7 @@ pub mod pallet {
         Blake2_128Concat,
     };
     use frame_system::pallet_prelude::*;
-    use sp_runtime::Vec;
+    use sp_runtime::{Permill, Vec};
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -189,6 +190,7 @@ pub mod pallet {
         }
         /// get a jokeymon in a region, given a random number
         fn get_jokeymon_in_region(_region_id: RegionId, _random_num: FindRate) -> JokeymonId {
+            Permill
             0
         }
     }
