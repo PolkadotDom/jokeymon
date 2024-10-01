@@ -23,7 +23,7 @@
 //   Update players food resources & jokeymon
 
 // Next
-// Convert rates to permill, from_parts, from_percent, from_rational, probs use from_percenty
+// finish the extrinsic, create a unit test for it
 
 pub use pallet::*;
 
@@ -40,12 +40,6 @@ pub mod weights;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/polkadot_sdk/frame_runtime/index.html>
-// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/your_first_pallet/index.html>
-//
-// To see a full list of `pallet` macros and their use cases, see:
-// <https://paritytech.github.io/polkadot-sdk/master/pallet_example_kitchensink/index.html>
-// <https://paritytech.github.io/polkadot-sdk/master/frame_support/pallet_macros/index.html>
 #[frame_support::pallet]
 pub mod pallet {
     use crate::types::*;
@@ -56,13 +50,12 @@ pub mod pallet {
         Blake2_128Concat,
     };
     use frame_system::pallet_prelude::*;
-    use sp_runtime::{Permill, Vec};
+    use sp_runtime::{traits::{Saturating, Zero}, Permill, Vec};
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        /// Because this pallet emits events, it depends on the runtime's definition of an event.
-        /// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/reference_docs/frame_runtime_types/index.html>
+        /// The runtime event.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// A type representing the weights required by the dispatchables of this pallet.
@@ -72,7 +65,10 @@ pub mod pallet {
         type RandomSource: Randomness<Self::Hash, BlockNumberFor<Self>>;
 
         /// Maximum amount of Jokeymon allowed in a region
-        type MaxJokeymonInRegion: Get<u32>;
+        type MaxJokeymonInRegion: Get<u16>;
+
+        /// Maximum jokeymon an account can hold at a time
+        type MaxJokeymonHoldable: Get<u16>;
     }
 
     #[pallet::pallet]
@@ -82,44 +78,20 @@ pub mod pallet {
     #[pallet::storage]
     pub type RandomNonce<T: Config> = StorageValue<_, u32, ValueQuery>;
 
-    /// Region to jokeymon chances
+    /// nonce for region creation
     #[pallet::storage]
-    pub type RegionToChances<T: Config> =
-        StorageMap<_, Blake2_128Concat, RegionId, Chances<T>, ValueQuery>;
+    pub type RegionNonce<T: Config> = StorageValue<_, u32, ValueQuery>;
+
+    /// Region id to its corresponding region
+    #[pallet::storage]
+    pub type RegionIdToRegion<T: Config> =
+        StorageMap<_, Blake2_128Concat, RegionId, Region<T>, ValueQuery>;
 
     /// Account to user data
     #[pallet::storage]
     pub type AccountToData<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, AccountData, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, T::AccountId, AccountData<T>, ValueQuery>;
 
-    /// Genesis Storage
-    #[pallet::genesis_config]
-    pub struct GenesisConfig<T: Config> {
-        pub region_to_chances: Vec<(RegionId, Chances<T>)>,
-    }
-
-    impl<T: Config> Default for GenesisConfig<T> {
-        fn default() -> Self {
-            Self {
-                region_to_chances : vec![(0u16, Chances::<T> {
-                    jokeymon_ids : BoundedVec::try_from(vec![0u16, 1u16, 2u16]).expect("messed up region to chances genesis"),
-                    jokeymon_rates : BoundedVec::try_from(vec![100u16, 200u16, 300u16]).expect("messed up region to chances genesis")
-                })],
-            }
-        }
-    }
-
-    #[pallet::genesis_build]
-    impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
-        fn build(&self) {
-            for (a,b) in &self.region_to_chances {
-                RegionToChances::<T>::insert(a, b);
-            }
-        }
-    }
-
-    /// Pallets use events to inform users when important changes are made.
-    /// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/your_first_pallet/index.html#event-and-error>
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
@@ -127,23 +99,15 @@ pub mod pallet {
         JokeymonCaptured { id: JokeymonId, who: T::AccountId },
     }
 
-    /// Errors inform users that something went wrong.
-    /// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/your_first_pallet/index.html#event-and-error>
     #[pallet::error]
     pub enum Error<T> {
-        /// Error names should be descriptive.
-        NoneValue,
-        /// Errors should have helpful documentation associated with them.
-        StorageOverflow,
+        /// No room left for jokeymon in the account's party
+        TooManyJokeymon,
     }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
-    /// Dispatchable functions allows users to interact with the pallet and invoke state changes.
-    /// These functions materialize as "extrinsics", which are often compared to transactions.
-    /// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
-    /// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/your_first_pallet/index.html#dispatchables>
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Catch a jokeymon
@@ -157,13 +121,17 @@ pub mod pallet {
 
             // get random number
             let seed = Self::get_and_increment_nonce();
-            let random = Self::get_random_number(&seed);
+            let roll = Self::get_random_number(&seed);
 
-            // decide which pokemon
+            // decide which jokeymon
             let region_id = AccountToData::<T>::get(&who).current_region;
-            let jokeymon_id = Self::get_jokeymon_in_region(region_id, random);
+            let region = RegionIdToRegion::<T>::get(region_id);
+            let caught_jokeymon_id = Self::get_jokeymon_in_region(region, roll);
 
-            // add pokemon to users collection
+            // add jokeymon to a users collection
+            let account_data = AccountToData::<T>::get(who);
+            account_data.jokeymon.try_push(caught_jokeymon_id).ok_or(Error::<T>::TooManyJokeymon)?;
+            AccountToData::<T>::put(account_data);
 
             // deposit and event
             Self::deposit_event(Event::JokeymonCaptured {
@@ -175,6 +143,35 @@ pub mod pallet {
         }
     }
 
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            let rate_one = Permill::from_percent(20);
+            let rate_two = Permill::from_percent(30);
+            let rate_three = Permill::from_percent(50);
+            Self {
+                region_to_chances : vec![(0u16, Chances::<T> {
+                    jokeymon_ids : BoundedVec::try_from(vec![0u16, 1u16, 2u16]).expect("messed up region to chances genesis"),
+                    jokeymon_rates : BoundedVec::try_from(vec![rate_one, rate_two, rate_three]).expect("messed up region to chances genesis")
+                })],
+            }
+        }
+    }
+
+    /// Genesis Storage
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config> {
+        pub region_to_chances: Vec<(RegionId, Chances<T>)>,
+    }
+
+    #[pallet::genesis_build]
+    impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
+        fn build(&self) {
+            for (a,b) in &self.region_to_chances {
+                RegionToChances::<T>::insert(a, b);
+            }
+        }
+    }
+
     impl<T: Config> Pallet<T> {
         /// use and update the nonce
         fn get_and_increment_nonce() -> Vec<u8> {
@@ -183,15 +180,20 @@ pub mod pallet {
             val.encode()
         }
         /// get a random number given the nonce
-        fn get_random_number(seed: &Vec<u8>) -> FindRate {
+        fn get_random_number(seed: &Vec<u8>) -> Permill {
             let (random, _) = T::RandomSource::random(seed);
             let as_bytes = random.encode();
-            u16::from_le_bytes([as_bytes[0], as_bytes[1]])
+            let part = u16::from_le_bytes([as_bytes[0], as_bytes[1]]);
+            Permill::from_rational(part, u16::MAX)
         }
         /// get a jokeymon in a region, given a random number
-        fn get_jokeymon_in_region(_region_id: RegionId, _random_num: FindRate) -> JokeymonId {
-            Permill
-            0
+        fn get_jokeymon_in_region(region: Region<T>, catch_roll: Permill) -> JokeymonId {
+            for (&id, &rate) in region.jokeymon_chances.iter() {
+                if (catch_roll == Permill::zero) {
+                    id
+                }
+                catch_roll = catch_roll.saturating_sub(rate);
+            }
         }
     }
 }

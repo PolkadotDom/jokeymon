@@ -3,7 +3,7 @@
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{BoundedVec, DefaultNoBound};
 use scale_info::TypeInfo;
-use sp_runtime::RuntimeDebug;
+use sp_runtime::{Permill, RuntimeDebug};
 
 // geographical
 pub type RegionId = u16;
@@ -12,8 +12,8 @@ pub type Coordinate = u16;
 // jokeymon
 pub type JokeymonId = u16;
 
-// jokeymon handling
-pub type FindRate = u16;
+// chances of finding a jokeymon in a region 
+pub type RegionJokeymonChances<T: crate::Config> = BoundedVec<(JokeymonId, Permill), T::MaxJokeymonInRegion>; 
 
 /// A jokeymon region
 #[derive(
@@ -31,32 +31,11 @@ pub type FindRate = u16;
     serde::Serialize,
     serde::Deserialize,
 )]
-pub struct Region {
+pub struct Region<T: crate::Config> {
     pub id: RegionId,
+    pub jokeymon_chances: RegionJokeymonChances<T>,
     pub latitude: Coordinate,
     pub longitude: Coordinate,
-}
-
-/// The jokeymon and their associated catch chance
-#[derive(
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    RuntimeDebug,
-    Encode,
-    Decode,
-    TypeInfo,
-    MaxEncodedLen,
-    DefaultNoBound,
-    serde::Serialize,
-    serde::Deserialize,
-)]
-#[scale_info(skip_type_params(T))]
-pub struct Chances<T: crate::Config> {
-    pub jokeymon_ids: BoundedVec<JokeymonId, T::MaxJokeymonInRegion>,
-    pub jokeymon_rates: BoundedVec<FindRate, T::MaxJokeymonInRegion>,
 }
 
 /// The account data associated with an account id
@@ -75,6 +54,7 @@ pub struct Chances<T: crate::Config> {
     serde::Serialize,
     serde::Deserialize,
 )]
-pub struct AccountData {
+pub struct AccountData<T: crate::Config> {
     pub current_region: RegionId,
+    pub jokeymon : BoundedVec<JokeymonId, T::MaxJokeymonHoldable>,
 }
