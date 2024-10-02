@@ -23,7 +23,10 @@
 //   Update players food resources & jokeymon
 
 // Next
-// finish the extrinsic, create a unit test for it
+// finish the extrinsic
+// fix bugs
+// test genesis still works
+// create a unit tests for it
 
 pub use pallet::*;
 
@@ -50,7 +53,8 @@ pub mod pallet {
         Blake2_128Concat,
     };
     use frame_system::pallet_prelude::*;
-    use sp_runtime::{traits::{Saturating, Zero}, Permill, Vec};
+    use sp_runtime::{traits::Saturating, Permill, Vec};
+    use scale_info::prelude::vec;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -65,10 +69,10 @@ pub mod pallet {
         type RandomSource: Randomness<Self::Hash, BlockNumberFor<Self>>;
 
         /// Maximum amount of Jokeymon allowed in a region
-        type MaxJokeymonInRegion: Get<u16>;
+        type MaxJokeymonInRegion: Get<u32>;
 
         /// Maximum jokeymon an account can hold at a time
-        type MaxJokeymonHoldable: Get<u16>;
+        type MaxJokeymonHoldable: Get<u32>;
     }
 
     #[pallet::pallet]
@@ -129,13 +133,14 @@ pub mod pallet {
             let caught_jokeymon_id = Self::get_jokeymon_in_region(region, roll);
 
             // add jokeymon to a users collection
-            let account_data = AccountToData::<T>::get(who);
-            account_data.jokeymon.try_push(caught_jokeymon_id).ok_or(Error::<T>::TooManyJokeymon)?;
-            AccountToData::<T>::put(account_data);
+            let mut account_data = AccountToData::<T>::try_get(&who)
+            .unwrap_or(AccountData::default());
+            account_data.jokeymon.try_push(caught_jokeymon_id).map_err(|_| Error::<T>::TooManyJokeymon)?;
+            AccountToData::<T>::set(&who, account_data);
 
             // deposit and event
             Self::deposit_event(Event::JokeymonCaptured {
-                id: jokeymon_id,
+                id: caught_jokeymon_id,
                 who: who,
             });
 
@@ -143,31 +148,37 @@ pub mod pallet {
         }
     }
 
+    
+    /// Genesis Storage
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config> {
+        pub region_id_to_region: Vec<(RegionId, Region<T>)>,
+    }
+
     impl<T: Config> Default for GenesisConfig<T> {
         fn default() -> Self {
             let rate_one = Permill::from_percent(20);
             let rate_two = Permill::from_percent(30);
             let rate_three = Permill::from_percent(50);
+            let chances = vec![(0u32, rate_one), (1u32, rate_two), (2u32, rate_three)];
             Self {
-                region_to_chances : vec![(0u16, Chances::<T> {
-                    jokeymon_ids : BoundedVec::try_from(vec![0u16, 1u16, 2u16]).expect("messed up region to chances genesis"),
-                    jokeymon_rates : BoundedVec::try_from(vec![rate_one, rate_two, rate_three]).expect("messed up region to chances genesis")
-                })],
+                region_id_to_region : vec![
+                    (0u32, Region::<T> {
+                    id : 0u32,
+                    jokeymon_chances : BoundedVec::try_from(chances).expect("Region default set up incorrectly"),
+                    latitude : 0u32,
+                    longitude : 0u32,
+                })
+                ],
             }
         }
     }
-
-    /// Genesis Storage
-    #[pallet::genesis_config]
-    pub struct GenesisConfig<T: Config> {
-        pub region_to_chances: Vec<(RegionId, Chances<T>)>,
-    }
-
+    
     #[pallet::genesis_build]
     impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
         fn build(&self) {
-            for (a,b) in &self.region_to_chances {
-                RegionToChances::<T>::insert(a, b);
+            for (a,b) in &self.region_id_to_region {
+                RegionIdToRegion::<T>::insert(a, b);
             }
         }
     }
@@ -183,17 +194,18 @@ pub mod pallet {
         fn get_random_number(seed: &Vec<u8>) -> Permill {
             let (random, _) = T::RandomSource::random(seed);
             let as_bytes = random.encode();
-            let part = u16::from_le_bytes([as_bytes[0], as_bytes[1]]);
-            Permill::from_rational(part, u16::MAX)
+            let part = u32::from_le_bytes([as_bytes[0], as_bytes[1], as_bytes[2], as_bytes[3]]);
+            Permill::from_rational(part, u32::MAX)
         }
         /// get a jokeymon in a region, given a random number
-        fn get_jokeymon_in_region(region: Region<T>, catch_roll: Permill) -> JokeymonId {
-            for (&id, &rate) in region.jokeymon_chances.iter() {
-                if (catch_roll == Permill::zero) {
-                    id
+        fn get_jokeymon_in_region(region: Region<T>, mut catch_roll: Permill) -> JokeymonId {
+            for (id, rate) in region.jokeymon_chances.iter() {
+                if catch_roll == Permill::zero() {
+                    return *id;
                 }
-                catch_roll = catch_roll.saturating_sub(rate);
+                catch_roll = catch_roll.saturating_sub(*rate);
             }
+            JokeymonId::default()
         }
     }
 }

@@ -39,6 +39,7 @@ impl pallet_insecure_randomness_collective_flip::Config for Test {}
 
 parameter_types! {
     pub const MaxJokeymonInRegion : u32 = 50;
+    pub const MaxJokeymonHoldable : u32 = 100;
 }
 
 impl crate::Config for Test {
@@ -46,15 +47,11 @@ impl crate::Config for Test {
     type WeightInfo = ();
     type RandomSource = RandomModule;
     type MaxJokeymonInRegion = MaxJokeymonInRegion;
+    type MaxJokeymonHoldable = MaxJokeymonHoldable;
 }
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-    // crate::GenesisConfig::<Test>::default()
-    //     .build_storage()
-    //     .unwrap()
-    //     .into()
-
     let t = RuntimeGenesisConfig::default()
         .build_storage()
         .unwrap()
@@ -62,10 +59,4 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| System::set_block_number(1));
     ext
-
-    // let mut t = frame_system::GenesisConfig::<TestRuntime>::default().build_storage().unwrap();
-    // pallet_balances::GenesisConfig::<TestRuntime> { balances: vec![(ENDOWED_ACCOUNT, 1_000_000)] }
-    // 	.assimilate_storage(&mut t)
-    // 	.unwrap();
-    // sp_io::TestExternalities::new(t)
 }

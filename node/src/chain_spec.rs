@@ -6,7 +6,7 @@ use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::{traits::{IdentifyAccount, Verify}, BoundedVec, Permill};
-use pallet_omni::types::Chances;
+use pallet_omni::types::Region;
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<Extensions>;
@@ -200,14 +200,16 @@ fn testnet_genesis(
         },
         "sudo": { "key": Some(root) },
         "omniPallet": {
-            "regionToChances": vec![
-                (0u16, Chances::<JokeymonRuntime> {
-                    jokeymon_ids : BoundedVec::try_from(vec![0u16, 1u16, 2u16]).expect("messed up region to chances genesis"),
-                    jokeymon_rates : BoundedVec::try_from(vec![
-                        Permill::from_percent(20), 
-                        Permill::from_percent(30), 
-                        Permill::from_percent(50)
-                        ]).expect("messed up region to chances genesis")
+            "regionIdToRegion": vec![
+                (0u32, Region::<JokeymonRuntime> {
+                    id : 0u32,
+                    jokeymon_chances : BoundedVec::try_from(vec![(0u32, Permill::from_percent(20)),
+                    (1u32, Permill::from_percent(30)), 
+                    (2u32, Permill::from_percent(50))
+                    ])
+                    .expect("Region default set up incorrectly"),
+                    latitude : 0u32,
+                    longitude : 0u32,
                 }),
                 // (1u16, Chances {
                 //     jokeymon_ids : BoundedVec::try_from(vec![1u16]),
