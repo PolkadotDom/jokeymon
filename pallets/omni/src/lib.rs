@@ -23,9 +23,7 @@
 //   Update players food resources & jokeymon
 
 // Next
-// finish the extrinsic
-// fix bugs
-// test genesis still works
+// fix edge cases
 // create a unit tests for it
 
 pub use pallet::*;
