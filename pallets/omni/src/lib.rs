@@ -50,7 +50,7 @@ pub mod pallet {
         traits::{BuildGenesisConfig, Randomness},
         Blake2_128Concat,
     };
-    use frame_system::pallet_prelude::*;
+    use frame_system::{Pallet as SystemPallet, pallet_prelude::*};
     use sp_runtime::{traits::Saturating, Permill, Vec};
     use scale_info::prelude::vec;
 
@@ -118,6 +118,10 @@ pub mod pallet {
     #[pallet::storage]
     pub type RegionNonce<T: Config> = StorageValue<_, u32, ValueQuery>;
 
+    /// nonce for the jokeymon unique individual id
+    #[pallet::storage]
+    pub type JokeymonIdNonce<T: Config> = StorageValue<_, JokeymonId, ValueQuery>;
+
     /// Region id to its corresponding region
     #[pallet::storage]
     pub type RegionIdToRegion<T: Config> =
@@ -128,11 +132,23 @@ pub mod pallet {
     pub type AccountToData<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, AccountData<T>, ValueQuery>;
 
+    /// Jokeymon unique id to jokeymon data
+    #[pallet::storage]
+    pub type JokeymonIdToData<T: Config> =
+        StorageMap<_, Blake2_128Concat, JokeymonId, JokeymonData<T>, OptionQuery>;
+
+    #[pallet::storage]
+    pub type JokeymonSpeciesIdToSpeciesData<T: Config> =
+        StorageMap<_, Blake2_128Concat, JokeymonSpeciesId, JokeymonSpeciesData, ValueQuery>;
+
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// A jokeymon was caught
-        JokeymonCaptured { id: JokeymonId, who: T::AccountId },
+        JokeymonCaptured { 
+            species_id: JokeymonSpeciesId,
+            jokeymon_id: JokeymonId,
+            who: T::AccountId },
     }
 
     #[pallet::error]
@@ -157,21 +173,34 @@ pub mod pallet {
             let mut account_data = AccountToData::<T>::get(&who);
 
             // get random number
-            let seed = Self::get_and_increment_nonce();
+            let seed = Self::get_and_increment_random_nonce();
             let roll = Self::get_random_number(&seed);
 
-            // decide which jokeymon
-            let region_id = account_data.current_region;
-            let region = RegionIdToRegion::<T>::get(region_id);
-            let caught_jokeymon_id = Self::get_jokeymon_in_region(region, roll);
+            // decide which jokeymon species
+            let current_region_id = account_data.current_region;
+            let region = RegionIdToRegion::<T>::get(current_region_id);
+            let caught_jokeymon_species_id = Self::get_jokeymon_in_region(region, roll);
+
+            // generate jokeymon of that species
+            let new_jokeymon_id = Self::get_and_increment_jokeymon_id_nonce();
+            // let species_data = JokeymonSpeciesIdToSpeciesData::<T>::get(caught_jokeymon_species_id);
+            // let mutated_species_data = Self::mutate_jokeymon_data(species_data);
+            let data = JokeymonData::<T> {
+                id : caught_jokeymon_species_id,
+                birth_date : SystemPallet::<T>::block_number(),
+            };
+
+            // add that jokeymon to the jokeymon data bank
+            JokeymonIdToData::<T>::set(new_jokeymon_id, Some(data));
 
             // add jokeymon to a users collection
-            account_data.jokeymon.try_push(caught_jokeymon_id).map_err(|_| Error::<T>::TooManyJokeymon)?;
+            account_data.jokeymon.try_push(new_jokeymon_id).map_err(|_| Error::<T>::TooManyJokeymon)?;
             AccountToData::<T>::set(&who, account_data);
 
             // deposit and event
             Self::deposit_event(Event::JokeymonCaptured {
-                id: caught_jokeymon_id,
+                species_id: caught_jokeymon_species_id,
+                jokeymon_id: new_jokeymon_id,
                 who: who,
             });
 
@@ -180,11 +209,17 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        /// use and update the nonce
-        fn get_and_increment_nonce() -> Vec<u8> {
+        /// use and update the random nonce
+        fn get_and_increment_random_nonce() -> Vec<u8> {
             let val = RandomNonce::<T>::get();
             RandomNonce::<T>::put(val.wrapping_add(1));
             val.encode()
+        }
+        /// use and update the jokeymon unique identifier nonce
+        fn get_and_increment_jokeymon_id_nonce() -> JokeymonId {
+            let val = JokeymonIdNonce::<T>::get();
+            JokeymonIdNonce::<T>::put(val.wrapping_add(1));
+            val
         }
         /// get a random number given the nonce
         fn get_random_number(seed: &Vec<u8>) -> Permill {
@@ -194,14 +229,15 @@ pub mod pallet {
             Permill::from_rational(part, u32::MAX)
         }
         /// get a jokeymon in a region, given a random number
-        fn get_jokeymon_in_region(region: Region<T>, mut catch_roll: Permill) -> JokeymonId {
+        fn get_jokeymon_in_region(region: Region<T>, mut catch_roll: Permill) -> JokeymonSpeciesId {
             for (id, rate) in region.jokeymon_chances.iter() {
                 if catch_roll == Permill::zero() {
                     return *id;
                 }
                 catch_roll = catch_roll.saturating_sub(*rate);
             }
-            JokeymonId::default()
+            u32::MAX.into()
+            // JokeymonId::default()
         }
     }
 }
