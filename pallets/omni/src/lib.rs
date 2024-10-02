@@ -23,7 +23,7 @@
 //   Update players food resources & jokeymon
 
 // Next
-// fix edge cases
+// move any state instantiation for tests outside of genesis default config
 // create a unit tests for it
 
 pub use pallet::*;
@@ -53,6 +53,40 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use sp_runtime::{traits::Saturating, Permill, Vec};
     use scale_info::prelude::vec;
+
+    /// Genesis Storage
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config> {
+        pub region_id_to_region: Vec<(RegionId, Region<T>)>,
+    }
+
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            let rate_one = Permill::from_percent(20);
+            let rate_two = Permill::from_percent(30);
+            let rate_three = Permill::from_percent(50);
+            let chances = vec![(0u32, rate_one), (1u32, rate_two), (2u32, rate_three)];
+            Self {
+                region_id_to_region : vec![
+                    (0u32, Region::<T> {
+                    id : 0u32,
+                    jokeymon_chances : BoundedVec::try_from(chances).expect("Region default set up incorrectly"),
+                    latitude : 0u32,
+                    longitude : 0u32,
+                })
+                ],
+            }
+        }
+    }
+    
+    #[pallet::genesis_build]
+    impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
+        fn build(&self) {
+            for (a,b) in &self.region_id_to_region {
+                RegionIdToRegion::<T>::insert(a, b);
+            }
+        }
+    }
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -118,21 +152,20 @@ pub mod pallet {
         #[pallet::call_index(0)]
         #[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
         pub fn catch_jokeymon(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-            // get user
+            // get user and account data
             let who = ensure_signed(origin)?;
+            let mut account_data = AccountToData::<T>::get(&who);
 
             // get random number
             let seed = Self::get_and_increment_nonce();
             let roll = Self::get_random_number(&seed);
 
             // decide which jokeymon
-            let region_id = AccountToData::<T>::get(&who).current_region;
+            let region_id = account_data.current_region;
             let region = RegionIdToRegion::<T>::get(region_id);
             let caught_jokeymon_id = Self::get_jokeymon_in_region(region, roll);
 
             // add jokeymon to a users collection
-            let mut account_data = AccountToData::<T>::try_get(&who)
-            .unwrap_or(AccountData::default());
             account_data.jokeymon.try_push(caught_jokeymon_id).map_err(|_| Error::<T>::TooManyJokeymon)?;
             AccountToData::<T>::set(&who, account_data);
 
@@ -143,41 +176,6 @@ pub mod pallet {
             });
 
             Ok(().into())
-        }
-    }
-
-    
-    /// Genesis Storage
-    #[pallet::genesis_config]
-    pub struct GenesisConfig<T: Config> {
-        pub region_id_to_region: Vec<(RegionId, Region<T>)>,
-    }
-
-    impl<T: Config> Default for GenesisConfig<T> {
-        fn default() -> Self {
-            let rate_one = Permill::from_percent(20);
-            let rate_two = Permill::from_percent(30);
-            let rate_three = Permill::from_percent(50);
-            let chances = vec![(0u32, rate_one), (1u32, rate_two), (2u32, rate_three)];
-            Self {
-                region_id_to_region : vec![
-                    (0u32, Region::<T> {
-                    id : 0u32,
-                    jokeymon_chances : BoundedVec::try_from(chances).expect("Region default set up incorrectly"),
-                    latitude : 0u32,
-                    longitude : 0u32,
-                })
-                ],
-            }
-        }
-    }
-    
-    #[pallet::genesis_build]
-    impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
-        fn build(&self) {
-            for (a,b) in &self.region_id_to_region {
-                RegionIdToRegion::<T>::insert(a, b);
-            }
         }
     }
 

@@ -20,3 +20,8 @@ fn check_nonce_value() {
         assert_eq!(1, 0);
     });
 }
+
+// Too many jokeymon
+// Jokeymon caught
+// Catch works at bounds
+// All can be caught
