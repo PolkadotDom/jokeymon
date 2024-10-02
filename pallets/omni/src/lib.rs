@@ -5,10 +5,11 @@
 //   Jokeymon
 // 	 Regions
 //   JokeymonPerRegion
-//   Region population dynamics
+//   Region population dynamics (food, predation, climate)
 //   Food per region
 //   Users jokeymon
 //   Breed chart
+//   Infrastructure efficiency and cost?
 
 // Calls
 //   Catch - catch random jokeymon from that region
@@ -23,8 +24,8 @@
 //   Update players food resources & jokeymon
 
 // Next
+// create unit tests for it
 // move any state instantiation for tests outside of genesis default config
-// create a unit tests for it
 
 pub use pallet::*;
 
@@ -179,7 +180,7 @@ pub mod pallet {
             // decide which jokeymon species
             let current_region_id = account_data.current_region;
             let region = RegionIdToRegion::<T>::get(current_region_id);
-            let caught_jokeymon_species_id = Self::get_jokeymon_in_region(region, roll);
+            let caught_jokeymon_species_id = Self::get_jokeymon_in_region(&region, roll);
 
             // generate jokeymon of that species
             let new_jokeymon_id = Self::get_and_increment_jokeymon_id_nonce();
@@ -210,34 +211,33 @@ pub mod pallet {
 
     impl<T: Config> Pallet<T> {
         /// use and update the random nonce
-        fn get_and_increment_random_nonce() -> Vec<u8> {
+        pub(super) fn get_and_increment_random_nonce() -> Vec<u8> {
             let val = RandomNonce::<T>::get();
             RandomNonce::<T>::put(val.wrapping_add(1));
             val.encode()
         }
         /// use and update the jokeymon unique identifier nonce
-        fn get_and_increment_jokeymon_id_nonce() -> JokeymonId {
+        pub(super) fn get_and_increment_jokeymon_id_nonce() -> JokeymonId {
             let val = JokeymonIdNonce::<T>::get();
             JokeymonIdNonce::<T>::put(val.wrapping_add(1));
             val
         }
         /// get a random number given the nonce
-        fn get_random_number(seed: &Vec<u8>) -> Permill {
+        pub(super) fn get_random_number(seed: &Vec<u8>) -> Permill {
             let (random, _) = T::RandomSource::random(seed);
             let as_bytes = random.encode();
             let part = u32::from_le_bytes([as_bytes[0], as_bytes[1], as_bytes[2], as_bytes[3]]);
             Permill::from_rational(part, u32::MAX)
         }
         /// get a jokeymon in a region, given a random number
-        fn get_jokeymon_in_region(region: Region<T>, mut catch_roll: Permill) -> JokeymonSpeciesId {
+        pub(super) fn get_jokeymon_in_region(region: &Region<T>, mut catch_roll: Permill) -> JokeymonSpeciesId {
             for (id, rate) in region.jokeymon_chances.iter() {
+                catch_roll = catch_roll.saturating_sub(*rate);
                 if catch_roll == Permill::zero() {
                     return *id;
                 }
-                catch_roll = catch_roll.saturating_sub(*rate);
             }
             u32::MAX.into()
-            // JokeymonId::default()
         }
     }
 }
