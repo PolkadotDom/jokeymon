@@ -24,7 +24,6 @@
 //   Update players food resources & jokeymon
 
 // Next
-// create unit tests for it
 // move any state instantiation for tests outside of genesis default config
 
 pub use pallet::*;
@@ -51,9 +50,9 @@ pub mod pallet {
         traits::{BuildGenesisConfig, Randomness},
         Blake2_128Concat,
     };
-    use frame_system::{Pallet as SystemPallet, pallet_prelude::*};
-    use sp_runtime::{traits::Saturating, Permill, Vec};
+    use frame_system::{pallet_prelude::*, Pallet as SystemPallet};
     use scale_info::prelude::vec;
+    use sp_runtime::{traits::Saturating, Permill, Vec};
 
     /// Genesis Storage
     #[pallet::genesis_config]
@@ -63,27 +62,17 @@ pub mod pallet {
 
     impl<T: Config> Default for GenesisConfig<T> {
         fn default() -> Self {
-            let rate_one = Permill::from_percent(20);
-            let rate_two = Permill::from_percent(30);
-            let rate_three = Permill::from_percent(50);
-            let chances = vec![(0u32, rate_one), (1u32, rate_two), (2u32, rate_three)];
             Self {
-                region_id_to_region : vec![
-                    (0u32, Region::<T> {
-                    id : 0u32,
-                    jokeymon_chances : BoundedVec::try_from(chances).expect("Region default set up incorrectly"),
-                    latitude : 0u32,
-                    longitude : 0u32,
-                })
-                ],
+                region_id_to_region: Default::default(),
             }
         }
     }
-    
+
     #[pallet::genesis_build]
     impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
         fn build(&self) {
-            for (a,b) in &self.region_id_to_region {
+            //regions
+            for (a, b) in &self.region_id_to_region {
                 RegionIdToRegion::<T>::insert(a, b);
             }
         }
@@ -146,10 +135,11 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// A jokeymon was caught
-        JokeymonCaptured { 
+        JokeymonCaptured {
             species_id: JokeymonSpeciesId,
             jokeymon_id: JokeymonId,
-            who: T::AccountId },
+            who: T::AccountId,
+        },
     }
 
     #[pallet::error]
@@ -187,15 +177,18 @@ pub mod pallet {
             // let species_data = JokeymonSpeciesIdToSpeciesData::<T>::get(caught_jokeymon_species_id);
             // let mutated_species_data = Self::mutate_jokeymon_data(species_data);
             let data = JokeymonData::<T> {
-                id : caught_jokeymon_species_id,
-                birth_date : SystemPallet::<T>::block_number(),
+                id: caught_jokeymon_species_id,
+                birth_date: SystemPallet::<T>::block_number(),
             };
 
             // add that jokeymon to the jokeymon data bank
             JokeymonIdToData::<T>::set(new_jokeymon_id, Some(data));
 
             // add jokeymon to a users collection
-            account_data.jokeymon.try_push(new_jokeymon_id).map_err(|_| Error::<T>::TooManyJokeymon)?;
+            account_data
+                .jokeymon
+                .try_push(new_jokeymon_id)
+                .map_err(|_| Error::<T>::TooManyJokeymon)?;
             AccountToData::<T>::set(&who, account_data);
 
             // deposit and event
@@ -230,7 +223,10 @@ pub mod pallet {
             Permill::from_rational(part, u32::MAX)
         }
         /// get a jokeymon in a region, given a random number
-        pub(super) fn get_jokeymon_in_region(region: &Region<T>, mut catch_roll: Permill) -> JokeymonSpeciesId {
+        pub(super) fn get_jokeymon_in_region(
+            region: &Region<T>,
+            mut catch_roll: Permill,
+        ) -> JokeymonSpeciesId {
             for (id, rate) in region.jokeymon_chances.iter() {
                 catch_roll = catch_roll.saturating_sub(*rate);
                 if catch_roll == Permill::zero() {

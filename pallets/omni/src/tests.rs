@@ -1,20 +1,6 @@
+use frame_support::assert_noop;
 use sp_runtime::Permill;
-use frame_support::BoundedVec;
-use crate::{mock::*, pallet as OmniPallet, types::*};
-
-//mock a test jokeymon region
-fn get_test_region() -> Region<Test> {
-    let rate_one = Permill::from_percent(20);
-    let rate_two = Permill::from_percent(30);
-    let rate_three = Permill::from_percent(50);
-    let chances = vec![(0u32, rate_one), (1u32, rate_two), (2u32, rate_three)];
-    Region::<Test> {
-        id: 0u32,
-        jokeymon_chances: BoundedVec::try_from(chances).expect("Test region set up incorrectly"),
-        latitude: 0u32,
-        longitude: 0u32,
-    }
-}
+use crate::{mock::*, pallet as OmniPallet, Error};
 
 #[test]
 fn random_nonces_are_updated() {
@@ -35,24 +21,58 @@ fn catch_works_at_bounds() {
     new_test_ext()
         .execute_with(|| {
             let region = get_test_region();
-            // upper bound
-            let mut id = OmniPallet::Pallet::<Test>::get_jokeymon_in_region(&region, Permill::one());
-            assert_ne!(id, u32::MAX);
             // lower bound
-            id = OmniPallet::Pallet::<Test>::get_jokeymon_in_region(&region, Permill::zero());
+            let mut id = OmniPallet::Pallet::<Test>::get_jokeymon_in_region(&region, Permill::zero());
+            assert_ne!(id, u32::MAX);
+            // upper bound
+            id = OmniPallet::Pallet::<Test>::get_jokeymon_in_region(&region, Permill::one());
             assert_ne!(id, u32::MAX);
 })
 }
 
 #[test]
-fn check_nonce_value() {
+fn jokeymon_catching_works() {
     new_test_ext().execute_with(|| {
-        let x = OmniPallet::RegionIdToRegion::<Test>::get(0u32);
-        println!("{:?}", x.jokeymon_chances.to_vec());
-        assert_eq!(1, 0);
+        // before
+        let account_data = OmniPallet::AccountToData::<Test>::get(0u64);
+        assert_eq!(account_data.jokeymon.to_vec().len(), 0);
+
+        // catch
+        let _ = OmniPallet::Pallet::<Test>::catch_jokeymon(RuntimeOrigin::signed(0u64));
+
+        // after
+        let account_data = OmniPallet::AccountToData::<Test>::get(0u64);
+        assert_eq!(account_data.jokeymon.to_vec().len(), 1);
     });
 }
 
-// Too many jokeymon
-// Jokeymon caught
-// All can be caught
+#[test]
+fn birthdate_works() {
+    new_test_ext().execute_with(|| {
+        System::set_block_number(10);
+        // catch
+        let _ = OmniPallet::Pallet::<Test>::catch_jokeymon(RuntimeOrigin::signed(0u64));
+        // check
+        let account_data = OmniPallet::AccountToData::<Test>::get(0u64);
+        let jokeymon_id = account_data.jokeymon[0];
+        let jokeymon_data = OmniPallet::JokeymonIdToData::<Test>::get(jokeymon_id)
+        .expect("Jokeymon individual data wasn't set!");
+        assert_eq!(jokeymon_data.birth_date, 10);
+    });
+}
+
+#[test]
+fn catching_to_many_fails() {
+    new_test_ext().execute_with(|| {
+        let bound = <Test as crate::Config>::MaxJokeymonHoldable::get();
+        for i in 0..101 {
+            let res = OmniPallet::Pallet::<Test>::catch_jokeymon(RuntimeOrigin::signed(0u64));
+            if i == bound {
+                assert_noop!(
+                    res,
+                    Error::<Test>::TooManyJokeymon
+                );
+            }
+        }
+    });
+}
