@@ -77,6 +77,7 @@ pub(super) fn get_test_region() -> Region<Test> {
     let chances = vec![(0u32, pop_one), (1u32, pop_two), (2u32, pop_three)];
     Region::<Test> {
         id: RegionId::default(),
+        total_population: 45,
         population_demographics: (0, BoundedVec::try_from(chances).unwrap()),
         latitude: 0u32,
         longitude: 0u32,
