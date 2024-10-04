@@ -10,6 +10,7 @@
 //   Users jokeymon
 //   Breed chart
 //   Infrastructure efficiency and cost?
+//   Catch rates proportional to population
 
 // Calls
 //   Catch - catch random jokeymon from that region
@@ -24,7 +25,8 @@
 //   Update players food resources & jokeymon
 
 // Next
-// move any state instantiation for tests outside of genesis default config
+// hook that updates population dynamics in the regions
+// inherent that uses offchain function
 
 pub use pallet::*;
 
@@ -52,6 +54,7 @@ pub mod pallet {
     };
     use frame_system::{pallet_prelude::*, Pallet as SystemPallet};
     use scale_info::prelude::vec;
+    use serde::{Deserialize, Serialize};
     use sp_runtime::{traits::Saturating, Permill, Vec};
 
     /// Genesis Storage
@@ -90,8 +93,8 @@ pub mod pallet {
         /// A source of randomness
         type RandomSource: Randomness<Self::Hash, BlockNumberFor<Self>>;
 
-        /// Maximum amount of Jokeymon allowed in a region
-        type MaxJokeymonInRegion: Get<u32>;
+        /// Maximum amount of Jokeymon species allowed in a region
+        type MaxSpeciesInRegion: Get<u32>;
 
         /// Maximum jokeymon an account can hold at a time
         type MaxJokeymonHoldable: Get<u32>;
@@ -146,6 +149,10 @@ pub mod pallet {
     pub enum Error<T> {
         /// No room left for jokeymon in the account's party
         TooManyJokeymon,
+        /// No jokeymon left in the region to catch
+        NoCatchableJokeymon {
+            region_id : RegionId,
+        },
     }
 
     #[pallet::hooks]
@@ -167,17 +174,23 @@ pub mod pallet {
             let seed = Self::get_and_increment_random_nonce();
             let roll = Self::get_random_number(&seed);
 
-            // decide which jokeymon species
+            // check region has available jokeymon
             let current_region_id = account_data.current_region;
-            let region = RegionIdToRegion::<T>::get(current_region_id);
-            let caught_jokeymon_species_id = Self::get_jokeymon_in_region(&region, roll);
+            let mut region = RegionIdToRegion::<T>::get(current_region_id);
+            if region.population_demographics.0 == 0 {
+                Err(Error::<T>::NoCatchableJokeymon { region_id : current_region_id })?
+            }
+
+            // decide which jokeymon species, decrement it from wild
+            let caught_species_id = Self::get_jokeymon_in_region(&region, roll);
+            Self::decrement_species_in_population(&region, caught_species_id, 1);
 
             // generate jokeymon of that species
             let new_jokeymon_id = Self::get_and_increment_jokeymon_id_nonce();
             // let species_data = JokeymonSpeciesIdToSpeciesData::<T>::get(caught_jokeymon_species_id);
             // let mutated_species_data = Self::mutate_jokeymon_data(species_data);
             let data = JokeymonData::<T> {
-                id: caught_jokeymon_species_id,
+                id: caught_species_id,
                 birth_date: SystemPallet::<T>::block_number(),
             };
 
@@ -193,7 +206,7 @@ pub mod pallet {
 
             // deposit and event
             Self::deposit_event(Event::JokeymonCaptured {
-                species_id: caught_jokeymon_species_id,
+                species_id: caught_species_id,
                 jokeymon_id: new_jokeymon_id,
                 who: who,
             });
@@ -209,12 +222,14 @@ pub mod pallet {
             RandomNonce::<T>::put(val.wrapping_add(1));
             val.encode()
         }
+
         /// use and update the jokeymon unique identifier nonce
         pub(super) fn get_and_increment_jokeymon_id_nonce() -> JokeymonId {
             let val = JokeymonIdNonce::<T>::get();
             JokeymonIdNonce::<T>::put(val.wrapping_add(1));
             val
         }
+
         /// get a random number given the nonce
         pub(super) fn get_random_number(seed: &Vec<u8>) -> Permill {
             let (random, _) = T::RandomSource::random(seed);
@@ -222,18 +237,51 @@ pub mod pallet {
             let part = u32::from_le_bytes([as_bytes[0], as_bytes[1], as_bytes[2], as_bytes[3]]);
             Permill::from_rational(part, u32::MAX)
         }
+
         /// get a jokeymon in a region, given a random number
         pub(super) fn get_jokeymon_in_region(
             region: &Region<T>,
             mut catch_roll: Permill,
         ) -> JokeymonSpeciesId {
-            for (id, rate) in region.jokeymon_chances.iter() {
+            // generate chances based on population size
+            let total = region.total_population;
+            let sub_totals = region.population_demographics;
+            let jokeymon_chances = Vec::new();
+            for (id, size) in sub_totals.iter() {
+                jokeymon_chances.push((*id, Permill::from_rational((*size).into(), total)));
+            }
+
+            // pick species based on chances
+            for (id, rate) in jokeymon_chances.iter() {
                 catch_roll = catch_roll.saturating_sub(*rate);
                 if catch_roll == Permill::zero() {
                     return *id;
                 }
             }
             u32::MAX.into()
+        }
+
+        /// Decrements the population size of a jokeymon in a region
+        pub(super) fn decrement_species_in_population(mut region: &Region<T>, id: JokeymonSpeciesId, amount: u32) {
+            let total_size = &region.total_population;
+            let sizes = &region.population_demographics;
+            if sizes.contains_key(id) {
+                let start = sizes[id];
+                sizes[id].saturating_sub(amount);
+                let end = sizes[id];
+                let actual_diff = start - end;
+                total_size.saturating_sub(amount); 
+            }
+        }
+
+        /// Increments the population size of a jokeymon in a region
+        pub(super) fn increment_species_in_population(mut region: &Region<T>, id: JokeymonSpeciesId, amount: u32) {
+            let total_size = &region.total_population;
+            let sizes = &region.population_demographics;
+            if sizes.contains_key(id) {
+                sizes[id].saturating_add(amount);
+                total_size.saturating_add(amount); 
+            }
         }
     }
 }

@@ -2,6 +2,8 @@ use frame_support::assert_noop;
 use sp_runtime::Permill;
 use crate::{mock::*, pallet as OmniPallet, Error};
 
+// ---- Catch Extrinsic ----
+
 #[test]
 fn random_nonces_are_updated() {
     new_test_ext().execute_with(|| {
@@ -76,3 +78,6 @@ fn catching_to_many_fails() {
         }
     });
 }
+
+// population run out
+// sub works when saturating species pop

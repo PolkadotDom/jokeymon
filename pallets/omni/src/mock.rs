@@ -49,7 +49,7 @@ impl crate::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type WeightInfo = ();
     type RandomSource = RandomModule;
-    type MaxJokeymonInRegion = MaxJokeymonInRegion;
+    type MaxSpeciesInRegion = MaxJokeymonInRegion;
     type MaxJokeymonHoldable = MaxJokeymonHoldable;
 }
 
@@ -71,13 +71,13 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
 //mock a test jokeymon region
 pub(super) fn get_test_region() -> Region<Test> {
-    let rate_one = Permill::from_percent(20);
-    let rate_two = Permill::from_percent(30);
-    let rate_three = Permill::from_percent(50);
-    let chances = vec![(0u32, rate_one), (1u32, rate_two), (2u32, rate_three)];
+    let pop_one = 15;
+    let pop_two = 15;
+    let pop_three = 15;
+    let chances = vec![(0u32, pop_one), (1u32, pop_two), (2u32, pop_three)];
     Region::<Test> {
         id: RegionId::default(),
-        jokeymon_chances: BoundedVec::try_from(chances).expect("Test region set up incorrectly"),
+        population_demographics: (0, BoundedVec::try_from(chances).unwrap()),
         latitude: 0u32,
         longitude: 0u32,
     }

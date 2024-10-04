@@ -316,6 +316,6 @@ impl pallet_omni::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type WeightInfo = pallet_omni::weights::SubstrateWeight<Runtime>;
     type RandomSource = RandomPallet;
-    type MaxJokeymonInRegion = MaxJokeymonInRegion;
+    type MaxSpeciesInRegion = MaxJokeymonInRegion;
     type MaxJokeymonHoldable = MaxJokeymonHoldable;
 }
