@@ -54,7 +54,6 @@ pub mod pallet {
     };
     use frame_system::{pallet_prelude::*, Pallet as SystemPallet};
     use scale_info::prelude::vec;
-    use serde::{Deserialize, Serialize};
     use sp_runtime::{traits::Saturating, Permill, Vec};
 
     /// Genesis Storage
@@ -177,7 +176,7 @@ pub mod pallet {
             // check region has available jokeymon
             let current_region_id = account_data.current_region;
             let mut region = RegionIdToRegion::<T>::get(current_region_id);
-            if region.population_demographics.0 == 0 {
+            if region.total_population == 0 {
                 Err(Error::<T>::NoCatchableJokeymon { region_id : current_region_id })?
             }
 
@@ -265,7 +264,7 @@ pub mod pallet {
         pub(super) fn decrement_species_in_population(mut region: &Region<T>, id: JokeymonSpeciesId, amount: u32) {
             let total_size = &region.total_population;
             let sizes = &region.population_demographics;
-            if sizes.contains_key(id) {
+            if sizes.contains_key(&id) {
                 let start = sizes[id];
                 sizes[id].saturating_sub(amount);
                 let end = sizes[id];
@@ -278,7 +277,7 @@ pub mod pallet {
         pub(super) fn increment_species_in_population(mut region: &Region<T>, id: JokeymonSpeciesId, amount: u32) {
             let total_size = &region.total_population;
             let sizes = &region.population_demographics;
-            if sizes.contains_key(id) {
+            if sizes.contains_key(&id) {
                 sizes[id].saturating_add(amount);
                 total_size.saturating_add(amount); 
             }
