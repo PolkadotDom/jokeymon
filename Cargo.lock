@@ -927,7 +927,7 @@ dependencies = [
 [[package]]
 name = "bounded-collections"
 version = "0.2.0"
-source = "git+https://github.com/PolkadotDom/parity-common.git?branch=dom/serde-for-boundedbtreemap#257e18bd7226f59012f9265bd7bc55cd6c65bb5e"
+source = "git+https://github.com/PolkadotDom/parity-common.git?branch=dom/serde-for-boundedbtreemap#f94330f942e9ef499d9d22ba95ec8c9a9d6ee6ce"
 dependencies = [
  "log",
  "parity-scale-codec",

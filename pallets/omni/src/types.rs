@@ -1,7 +1,7 @@
 //! Some structs used in the omni pallet
 
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::{BoundedVec, CloneNoBound, DefaultNoBound, EqNoBound, OrdNoBound, PartialEqNoBound, PartialOrdNoBound, RuntimeDebugNoBound};
+use frame_support::{BoundedVec, DefaultNoBound, EqNoBound, OrdNoBound, PartialEqNoBound, PartialOrdNoBound, RuntimeDebugNoBound};
 use bounded_collections::BoundedBTreeMap;
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
@@ -42,7 +42,7 @@ pub enum Diet {
 
 /// A jokeymon region
 #[derive(
-    CloneNoBound,
+    Clone,
     PartialEqNoBound,
     EqNoBound,
     PartialOrdNoBound,

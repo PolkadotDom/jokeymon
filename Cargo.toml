@@ -18,7 +18,7 @@ resolver = "2"
 jokeymon-runtime = { path = "./runtime", default-features = false }
 pallet-parachain-template = { path = "./pallets/template", default-features = false }
 pallet-omni = { path = "./pallets/omni", default-features = false}
-bounded-collections = { git = "https://github.com/PolkadotDom/parity-common.git", branch = "dom/serde-for-boundedbtreemap", package = "bounded-collections"}
+bounded-collections = { git = "https://github.com/PolkadotDom/parity-common.git", branch = "dom/serde-for-boundedbtreemap", package = "bounded-collections" }
 
 clap = { version = "4.5.3" }
 codec = { version = "3.6.12", default-features = false, package = "parity-scale-codec" }

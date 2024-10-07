@@ -64,8 +64,9 @@ fn birthdate_works() {
 }
 
 #[test]
-fn catching_to_many_fails() {
+fn catching_too_many_fails() {
     new_test_ext().execute_with(|| {
+
         let bound = <Test as crate::Config>::MaxJokeymonHoldable::get();
         for i in 0..101 {
             let res = OmniPallet::Pallet::<Test>::catch_jokeymon(RuntimeOrigin::signed(0u64));
@@ -79,5 +80,66 @@ fn catching_to_many_fails() {
     });
 }
 
-// population run out
-// sub works when saturating species pop
+#[test]
+fn depleting_region_works() {
+    new_test_ext().execute_with(|| {
+        let region = OmniPallet::RegionIdToRegion::<Test>::get(&0);
+        let num_jokeymon = region.total_population;
+
+        // catch the entire population
+        for i in 0..num_jokeymon {
+            let _ = OmniPallet::Pallet::<Test>::catch_jokeymon(RuntimeOrigin::signed(i));
+        }
+
+        // next catch should fail
+        assert_noop!(
+            OmniPallet::Pallet::<Test>::catch_jokeymon(RuntimeOrigin::signed(0u64)),
+            Error::<Test>::NoCatchableJokeymon
+        );
+    });
+}
+
+#[test]
+fn decrement_species_should_work() {
+    new_test_ext().execute_with(|| {
+        let mut region = get_test_region();
+        
+        // decrement non saturating
+        assert_eq!(region.population_demographics[&0], 150);
+        OmniPallet::Pallet::<Test>::decrement_species_in_population(&mut region, 0, 1);
+        assert_eq!(region.population_demographics[&0], 149);
+
+        // decrement saturating, key should no longer exist
+        OmniPallet::Pallet::<Test>::decrement_species_in_population(&mut region, 0, 200);
+        assert!(!region.population_demographics.contains_key(&0));
+        assert_eq!(region.total_population, 300);
+    });
+}
+
+#[test]
+fn increment_species_should_work() {
+    new_test_ext().execute_with(|| {
+        let mut region = get_test_region();
+        
+        // increment non new
+        assert_eq!(region.population_demographics[&0], 150);
+        let _ = OmniPallet::Pallet::<Test>::increment_species_in_population(&mut region, 0, 1);
+        assert_eq!(region.population_demographics[&0], 151);
+
+        // increment new species
+        assert!(!region.population_demographics.contains_key(&3));
+        let _ = OmniPallet::Pallet::<Test>::increment_species_in_population(&mut region, 3, 100);
+        assert!(region.population_demographics.contains_key(&3));
+        assert_eq!(region.population_demographics[&3], 100);
+        assert_eq!(region.total_population, 551);
+
+        // add too many species
+        let max_species = <Test as crate::Config>::MaxSpeciesInRegion::get();
+        for i in 4..max_species {
+            let _ = OmniPallet::Pallet::<Test>::increment_species_in_population(&mut region, i, 1);
+        }
+        let res = OmniPallet::Pallet::<Test>::increment_species_in_population(&mut region, max_species + 1, 1);
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), Error::<Test>::RegionSpeciesDiversitySaturated);
+    });
+}

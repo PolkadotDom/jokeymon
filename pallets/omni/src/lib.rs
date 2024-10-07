@@ -46,6 +46,7 @@ mod benchmarking;
 #[frame_support::pallet]
 pub mod pallet {
     use crate::types::*;
+    use bounded_collections::Get as BGet;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
@@ -93,7 +94,7 @@ pub mod pallet {
         type RandomSource: Randomness<Self::Hash, BlockNumberFor<Self>>;
 
         /// Maximum amount of Jokeymon species allowed in a region
-        type MaxSpeciesInRegion: Get<u32>;
+        type MaxSpeciesInRegion: Get<u32> + BGet<u32>;
 
         /// Maximum jokeymon an account can hold at a time
         type MaxJokeymonHoldable: Get<u32>;
@@ -144,14 +145,15 @@ pub mod pallet {
         },
     }
 
+    #[cfg_attr(test, derive(PartialEq))]
     #[pallet::error]
     pub enum Error<T> {
         /// No room left for jokeymon in the account's party
         TooManyJokeymon,
         /// No jokeymon left in the region to catch
-        NoCatchableJokeymon {
-            region_id : RegionId,
-        },
+        NoCatchableJokeymon,
+        /// No room left in region for new species
+        RegionSpeciesDiversitySaturated,
     }
 
     #[pallet::hooks]
@@ -177,13 +179,14 @@ pub mod pallet {
             let current_region_id = account_data.current_region;
             let mut region = RegionIdToRegion::<T>::get(current_region_id);
             if region.total_population == 0 {
-                Err(Error::<T>::NoCatchableJokeymon { region_id : current_region_id })?
+                Err(Error::<T>::NoCatchableJokeymon)?
             }
 
-            // decide which jokeymon species, decrement it from wild
+            // decide which jokeymon species, decrement it from region
             let caught_species_id = Self::get_jokeymon_in_region(&region, roll);
-            Self::decrement_species_in_population(&region, caught_species_id, 1);
-
+            Self::decrement_species_in_population(&mut region, caught_species_id, 1);
+            RegionIdToRegion::<T>::set(current_region_id, region);
+            
             // generate jokeymon of that species
             let new_jokeymon_id = Self::get_and_increment_jokeymon_id_nonce();
             // let species_data = JokeymonSpeciesIdToSpeciesData::<T>::get(caught_jokeymon_species_id);
@@ -242,12 +245,20 @@ pub mod pallet {
             region: &Region<T>,
             mut catch_roll: Permill,
         ) -> JokeymonSpeciesId {
+            let eps = Permill::from_parts(1u32);
+            let mut eps_added = false;
+            
             // generate chances based on population size
             let total = region.total_population;
-            let sub_totals = region.population_demographics;
-            let jokeymon_chances = Vec::new();
+            let sub_totals = &region.population_demographics;
+            let mut jokeymon_chances = Vec::new();
             for (id, size) in sub_totals.iter() {
-                jokeymon_chances.push((*id, Permill::from_rational((*size).into(), total)));
+                let mut p = Permill::from_rational((*size).into(), total);
+                if !eps_added { // Just once to offset rounding issue
+                    p = p.saturating_add(eps);
+                    eps_added = true;
+                }
+                jokeymon_chances.push((*id, p));
             }
 
             // pick species based on chances
@@ -261,26 +272,49 @@ pub mod pallet {
         }
 
         /// Decrements the population size of a jokeymon in a region
-        pub(super) fn decrement_species_in_population(mut region: &Region<T>, id: JokeymonSpeciesId, amount: u32) {
-            let total_size = &region.total_population;
-            let sizes = &region.population_demographics;
-            if sizes.contains_key(&id) {
-                let start = sizes[id];
-                sizes[id].saturating_sub(amount);
-                let end = sizes[id];
-                let actual_diff = start - end;
-                total_size.saturating_sub(amount); 
+        pub(super) fn decrement_species_in_population(
+            region: &mut Region<T>,
+            id: JokeymonSpeciesId,
+            amount: u32,
+        ) {
+            let total_size = &mut region.total_population;
+            let sizes = &mut region.population_demographics;
+
+            if let Some(population_size) = sizes.get_mut(&id) {
+                //decrement
+                let original = *population_size;
+                let end = population_size.saturating_sub(amount);
+                let actual_diff = original - end;
+                *population_size = end;
+                *total_size = total_size.saturating_sub(actual_diff.into());
+                //remove if 0
+                if end == 0 {
+                    sizes.remove(&id);
+                }
             }
         }
 
         /// Increments the population size of a jokeymon in a region
-        pub(super) fn increment_species_in_population(mut region: &Region<T>, id: JokeymonSpeciesId, amount: u32) {
-            let total_size = &region.total_population;
-            let sizes = &region.population_demographics;
-            if sizes.contains_key(&id) {
-                sizes[id].saturating_add(amount);
-                total_size.saturating_add(amount); 
+        pub(super) fn increment_species_in_population(
+            region: &mut Region<T>,
+            id: JokeymonSpeciesId,
+            amount: u32,
+        ) -> Result<(), Error<T>> {
+            let total_size = &mut region.total_population;
+            let sizes = &mut region.population_demographics;
+
+            if let Some(population_size) = sizes.get_mut(&id) {
+                // species already in region, add to size
+                let new_size = population_size.saturating_add(amount);
+                *population_size = new_size;
+            } else {
+                // not in region
+                sizes
+                    .try_insert(id, amount)
+                    .map_err(|_| Error::<T>::RegionSpeciesDiversitySaturated)?;
             }
+            *total_size = total_size.saturating_add(amount.into());
+            Ok(())
         }
     }
 }
