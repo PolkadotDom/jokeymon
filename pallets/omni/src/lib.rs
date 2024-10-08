@@ -10,7 +10,7 @@
 //   Users jokeymon
 //   Breed chart
 //   Infrastructure efficiency and cost?
-//   Catch rates proportional to population
+//   Region to region adjacency matrix
 
 // Calls
 //   Catch - catch random jokeymon from that region
@@ -93,7 +93,7 @@ pub mod pallet {
         /// A source of randomness
         type RandomSource: Randomness<Self::Hash, BlockNumberFor<Self>>;
 
-        /// Maximum amount of Jokeymon species allowed in a region
+        /// Maximum amount of Jokeymon species allowed in a region (BGet while waiting on sdk merge)
         type MaxSpeciesInRegion: Get<u32> + BGet<u32>;
 
         /// Maximum jokeymon an account can hold at a time
@@ -157,7 +157,15 @@ pub mod pallet {
     }
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
+            // For each region, update it's population
+            foreach (_, mut region) in RegionIdToRegion::<T> {
+                Self::update_regional_population(region)
+            }
+            Weight::zero()
+        }
+    }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -315,6 +323,15 @@ pub mod pallet {
             }
             *total_size = total_size.saturating_add(amount.into());
             Ok(())
+        }
+
+        /// Updates a regions population based on the ____ formula
+        pub(super) fn update_regional_population(region: &mut Region<T>) {
+            // get number of herbivores and carnivores
+
+            // calculate growth or decay of each
+
+            // distribute change proportionally to species size
         }
     }
 }

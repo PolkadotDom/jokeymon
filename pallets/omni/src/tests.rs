@@ -2,6 +2,20 @@ use frame_support::assert_noop;
 use sp_runtime::Permill;
 use crate::{mock::*, pallet as OmniPallet, Error};
 
+// ---- Population Dynamics ----
+
+#[test]
+fn population_stable() {
+    new_test_ext().execute_with(|| {
+        let mut region = get_test_region();
+        for _ in 0..10_000 {
+            OmniPallet::update_regional_population(region);
+        }
+        assert!(region.total_population > 0);
+        assert!(region.total_population < 1000);
+    });
+}
+
 // ---- Catch Extrinsic ----
 
 #[test]
