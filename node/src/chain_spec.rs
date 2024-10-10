@@ -1,12 +1,15 @@
 use cumulus_primitives_core::ParaId;
 use jokeymon_runtime as runtime;
-use runtime::{AccountId, AuraId, Signature, EXISTENTIAL_DEPOSIT, Runtime as JokeymonRuntime};
+use pallet_omni::types::Region;
+use runtime::{AccountId, AuraId, Runtime as JokeymonRuntime, Signature, EXISTENTIAL_DEPOSIT};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
-use sp_runtime::{traits::{IdentifyAccount, Verify}, BoundedVec, Permill};
-use pallet_omni::types::Region;
+use sp_runtime::{
+    traits::{IdentifyAccount, Verify},
+    BoundedVec, Permill,
+};
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<Extensions>;
@@ -204,7 +207,7 @@ fn testnet_genesis(
                 (0u32, Region::<JokeymonRuntime> {
                     id : 0u32,
                     jokeymon_chances : BoundedVec::try_from(vec![(0u32, Permill::from_percent(20)),
-                    (1u32, Permill::from_percent(30)), 
+                    (1u32, Permill::from_percent(30)),
                     (2u32, Permill::from_percent(50))
                     ])
                     .expect("Region default set up incorrectly"),

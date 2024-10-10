@@ -1,11 +1,14 @@
 //! Some structs used in the omni pallet
 
-use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::{BoundedVec, DefaultNoBound, EqNoBound, OrdNoBound, PartialEqNoBound, PartialOrdNoBound, RuntimeDebugNoBound};
 use bounded_collections::BoundedBTreeMap;
+use codec::{Decode, Encode, MaxEncodedLen};
+use frame_support::{
+    BoundedVec, DefaultNoBound, EqNoBound, OrdNoBound, PartialEqNoBound, PartialOrdNoBound,
+    RuntimeDebugNoBound,
+};
+use frame_system::pallet_prelude::BlockNumberFor;
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
-use frame_system::pallet_prelude::BlockNumberFor;
 
 // geographical
 pub type RegionId = u32;
@@ -16,7 +19,8 @@ pub type JokeymonSpeciesId = u32; // species identifier
 pub type JokeymonId = u64; // individual identifier
 
 // population size by jokeymon id
-pub type RegionPopulationDemographics<T> = BoundedBTreeMap<JokeymonSpeciesId, u32, <T as crate::Config>::MaxSpeciesInRegion>;
+pub type RegionPopulationDemographics<T> =
+    BoundedBTreeMap<JokeymonSpeciesId, u32, <T as crate::Config>::MaxSpeciesInRegion>;
 
 /// A jokeymon diet type
 #[derive(
@@ -37,7 +41,7 @@ pub type RegionPopulationDemographics<T> = BoundedBTreeMap<JokeymonSpeciesId, u3
 pub enum Diet {
     #[default]
     Herbivore,
-    Carnivore
+    Carnivore,
 }
 
 /// A jokeymon region
@@ -58,10 +62,11 @@ pub enum Diet {
 )]
 #[scale_info(skip_type_params(T))]
 #[serde(bound(serialize = "", deserialize = ""))]
-pub struct Region <T: crate::Config> {
+pub struct Region<T: crate::Config> {
     pub id: RegionId,
     pub total_population: u64,
     pub population_demographics: RegionPopulationDemographics<T>,
+    pub energy_production: u32,
     pub latitude: Coordinate,
     pub longitude: Coordinate,
 }
@@ -132,9 +137,6 @@ pub struct JokeymonSpeciesData {
     pub id: JokeymonSpeciesId,
     pub avg_weight: u16,
     pub avg_daily_food_consumption: u16,
-    pub diet: Diet, 
+    pub diet: Diet,
     pub evolves_to: Option<JokeymonSpeciesId>,
-
 }
-
-

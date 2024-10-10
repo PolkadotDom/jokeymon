@@ -54,7 +54,7 @@ pub mod pallet {
         Blake2_128Concat,
     };
     use frame_system::{pallet_prelude::*, Pallet as SystemPallet};
-    use scale_info::prelude::vec;
+    use scale_info::prelude::{vec, collections::BTreeMap};
     use sp_runtime::{traits::Saturating, Permill, Vec};
 
     /// Genesis Storage
@@ -130,8 +130,9 @@ pub mod pallet {
     pub type JokeymonIdToData<T: Config> =
         StorageMap<_, Blake2_128Concat, JokeymonId, JokeymonData<T>, OptionQuery>;
 
+    /// Species id to general species data
     #[pallet::storage]
-    pub type JokeymonSpeciesIdToSpeciesData<T: Config> =
+    pub type SpeciesIdToSpeciesData<T: Config> =
         StorageMap<_, Blake2_128Concat, JokeymonSpeciesId, JokeymonSpeciesData, ValueQuery>;
 
     #[pallet::event]
@@ -160,9 +161,9 @@ pub mod pallet {
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
             // For each region, update it's population
-            foreach (_, mut region) in RegionIdToRegion::<T> {
-                Self::update_regional_population(region)
-            }
+            // foreach (_, mut region) in RegionIdToRegion::<T> {
+            // Self::update_regional_population(region)
+            // }
             Weight::zero()
         }
     }
@@ -194,7 +195,7 @@ pub mod pallet {
             let caught_species_id = Self::get_jokeymon_in_region(&region, roll);
             Self::decrement_species_in_population(&mut region, caught_species_id, 1);
             RegionIdToRegion::<T>::set(current_region_id, region);
-            
+
             // generate jokeymon of that species
             let new_jokeymon_id = Self::get_and_increment_jokeymon_id_nonce();
             // let species_data = JokeymonSpeciesIdToSpeciesData::<T>::get(caught_jokeymon_species_id);
@@ -255,14 +256,15 @@ pub mod pallet {
         ) -> JokeymonSpeciesId {
             let eps = Permill::from_parts(1u32);
             let mut eps_added = false;
-            
+
             // generate chances based on population size
             let total = region.total_population;
             let sub_totals = &region.population_demographics;
             let mut jokeymon_chances = Vec::new();
             for (id, size) in sub_totals.iter() {
                 let mut p = Permill::from_rational((*size).into(), total);
-                if !eps_added { // Just once to offset rounding issue
+                if !eps_added {
+                    // Just once to offset rounding issue
                     p = p.saturating_add(eps);
                     eps_added = true;
                 }
@@ -325,13 +327,65 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Updates a regions population based on the ____ formula
+        /// Updates a regions population based on the Lotka-Volterra formula
         pub(super) fn update_regional_population(region: &mut Region<T>) {
-            // get number of herbivores and carnivores
-
-            // calculate growth or decay of each
-
-            // distribute change proportionally to species size
+            // Get number of herbivores and carnivores
+            let mut herb_species_count = 0;
+            let mut carn_species_count = 0;
+            let mut herb_total_count = 0;
+            let mut carn_total_count = 0;
+            let mut herb_food_intake = 0;
+        
+            for (id, pop) in &region.population_demographics {
+                let data = SpeciesIdToSpeciesData::<T>::get(id);
+                match data.diet {
+                    Diet::Herbivore => {
+                        herb_total_count += pop;
+                        herb_food_intake += pop * (data.avg_daily_food_consumption as u32);
+                        herb_species_count += 1;
+                    }
+                    Diet::Carnivore => {
+                        carn_total_count += pop;
+                        carn_species_count += 1;
+                    }
+                }
+            }
+        
+            // Calculate carrying capacity
+            let carrying_capacity = region.energy_production / herb_food_intake;
+        
+            // Mock params
+            let (alpha, beta, delta, gamma) = (2, 1, 1, 1);
+        
+            // Calculate growth or decay of each
+            let dh: i32 = ((alpha * herb_total_count)
+                * (1 - (herb_total_count / carrying_capacity))
+                - (beta * herb_total_count * carn_total_count)) as i32;
+            let dc: i32 =
+                ((delta * herb_total_count * carn_total_count) - (gamma * carn_total_count)) as i32;
+            let dh_per_species: i32 = dh / herb_species_count;
+            let dc_per_species: i32 = dc / carn_species_count;
+        
+            // Build new demographics
+            let mut new_demographics = BTreeMap::<u32, u32>::new();
+        
+            for (id, pop) in &region.population_demographics {
+                let data = SpeciesIdToSpeciesData::<T>::get(id);
+                let new_value = match data.diet {
+                    Diet::Herbivore => (*pop as i32 + dh_per_species).max(0) as u32,
+                    Diet::Carnivore => (*pop as i32 + dc_per_species).max(0) as u32,
+                };
+                new_demographics.insert(*id, new_value);
+            }
+        
+            // Create a new BoundedBTreeMap from the updated demographics
+            let new_population_demographics =
+                bounded_collections::BoundedBTreeMap::<u32, u32, T::MaxSpeciesInRegion>::try_from(new_demographics).unwrap_or(
+                    bounded_collections::BoundedBTreeMap::<u32, u32, T::MaxSpeciesInRegion>::new()
+                );
+        
+            // Update the region's population demographics
+            region.population_demographics = new_population_demographics;
         }
     }
 }

@@ -1,16 +1,17 @@
+use crate::{mock::*, pallet as OmniPallet, Error};
 use frame_support::assert_noop;
 use sp_runtime::Permill;
-use crate::{mock::*, pallet as OmniPallet, Error};
 
 // ---- Population Dynamics ----
 
 #[test]
-fn population_stable() {
+fn population_remains_stable() {
     new_test_ext().execute_with(|| {
         let mut region = get_test_region();
         for _ in 0..10_000 {
-            OmniPallet::update_regional_population(region);
+            OmniModule::update_regional_population(&mut region);
         }
+        println!("{:?}", region.population_demographics);
         assert!(region.total_population > 0);
         assert!(region.total_population < 1000);
     });
@@ -34,16 +35,15 @@ fn random_nonces_are_updated() {
 
 #[test]
 fn catch_works_at_bounds() {
-    new_test_ext()
-        .execute_with(|| {
-            let region = get_test_region();
-            // lower bound
-            let mut id = OmniPallet::Pallet::<Test>::get_jokeymon_in_region(&region, Permill::zero());
-            assert_ne!(id, u32::MAX);
-            // upper bound
-            id = OmniPallet::Pallet::<Test>::get_jokeymon_in_region(&region, Permill::one());
-            assert_ne!(id, u32::MAX);
-})
+    new_test_ext().execute_with(|| {
+        let region = get_test_region();
+        // lower bound
+        let mut id = OmniPallet::Pallet::<Test>::get_jokeymon_in_region(&region, Permill::zero());
+        assert_ne!(id, u32::MAX);
+        // upper bound
+        id = OmniPallet::Pallet::<Test>::get_jokeymon_in_region(&region, Permill::one());
+        assert_ne!(id, u32::MAX);
+    })
 }
 
 #[test]
@@ -72,7 +72,7 @@ fn birthdate_works() {
         let account_data = OmniPallet::AccountToData::<Test>::get(0u64);
         let jokeymon_id = account_data.jokeymon[0];
         let jokeymon_data = OmniPallet::JokeymonIdToData::<Test>::get(jokeymon_id)
-        .expect("Jokeymon individual data wasn't set!");
+            .expect("Jokeymon individual data wasn't set!");
         assert_eq!(jokeymon_data.birth_date, 10);
     });
 }
@@ -80,15 +80,11 @@ fn birthdate_works() {
 #[test]
 fn catching_too_many_fails() {
     new_test_ext().execute_with(|| {
-
         let bound = <Test as crate::Config>::MaxJokeymonHoldable::get();
         for i in 0..101 {
             let res = OmniPallet::Pallet::<Test>::catch_jokeymon(RuntimeOrigin::signed(0u64));
             if i == bound {
-                assert_noop!(
-                    res,
-                    Error::<Test>::TooManyJokeymon
-                );
+                assert_noop!(res, Error::<Test>::TooManyJokeymon);
             }
         }
     });
@@ -117,7 +113,7 @@ fn depleting_region_works() {
 fn decrement_species_should_work() {
     new_test_ext().execute_with(|| {
         let mut region = get_test_region();
-        
+
         // decrement non saturating
         assert_eq!(region.population_demographics[&0], 150);
         OmniPallet::Pallet::<Test>::decrement_species_in_population(&mut region, 0, 1);
@@ -134,7 +130,7 @@ fn decrement_species_should_work() {
 fn increment_species_should_work() {
     new_test_ext().execute_with(|| {
         let mut region = get_test_region();
-        
+
         // increment non new
         assert_eq!(region.population_demographics[&0], 150);
         let _ = OmniPallet::Pallet::<Test>::increment_species_in_population(&mut region, 0, 1);
@@ -152,8 +148,15 @@ fn increment_species_should_work() {
         for i in 4..max_species {
             let _ = OmniPallet::Pallet::<Test>::increment_species_in_population(&mut region, i, 1);
         }
-        let res = OmniPallet::Pallet::<Test>::increment_species_in_population(&mut region, max_species + 1, 1);
+        let res = OmniPallet::Pallet::<Test>::increment_species_in_population(
+            &mut region,
+            max_species + 1,
+            1,
+        );
         assert!(res.is_err());
-        assert_eq!(res.unwrap_err(), Error::<Test>::RegionSpeciesDiversitySaturated);
+        assert_eq!(
+            res.unwrap_err(),
+            Error::<Test>::RegionSpeciesDiversitySaturated
+        );
     });
 }
