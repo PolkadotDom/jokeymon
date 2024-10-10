@@ -1,17 +1,43 @@
-use crate::{mock::*, pallet as OmniPallet, Error};
+use crate::{mock::*, pallet as OmniPallet, Error, types::*};
 use frame_support::assert_noop;
 use sp_runtime::Permill;
 
 // ---- Population Dynamics ----
 
 #[test]
-fn population_remains_stable() {
+fn population_remains_stable_mixed_diets() {
     new_test_ext().execute_with(|| {
         let mut region = get_test_region();
         for _ in 0..10_000 {
             OmniModule::update_regional_population(&mut region);
         }
-        println!("{:?}", region.population_demographics);
+        assert!(region.total_population > 0);
+        assert!(region.total_population < 1000);
+    });
+}
+
+#[test]
+fn population_remains_stable_all_herbivores() {
+    new_test_ext().execute_with(|| {
+        let mut region = get_test_region();
+        set_species_data(2, 30, 45, Diet::Herbivore, None);
+        for _ in 0..10_000 {
+            OmniModule::update_regional_population(&mut region);
+        }
+        assert!(region.total_population > 0);
+        assert!(region.total_population < 1000);
+    });
+}
+
+#[test]
+fn population_remains_stable_all_carnivores() {
+    new_test_ext().execute_with(|| {
+        let mut region = get_test_region();
+        set_species_data(0, 10, 10, Diet::Carnivore, Some(1));
+        set_species_data(1, 20, 25, Diet::Carnivore, Some(2));
+        for _ in 0..10_000 {
+            OmniModule::update_regional_population(&mut region);
+        }
         assert!(region.total_population > 0);
         assert!(region.total_population < 1000);
     });

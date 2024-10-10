@@ -66,7 +66,7 @@ pub struct Region<T: crate::Config> {
     pub id: RegionId,
     pub total_population: u64,
     pub population_demographics: RegionPopulationDemographics<T>,
-    pub energy_production: u32,
+    pub energy_yield: u32,
     pub latitude: Coordinate,
     pub longitude: Coordinate,
 }

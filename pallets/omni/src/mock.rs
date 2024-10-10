@@ -86,7 +86,7 @@ pub(super) fn get_test_region() -> Region<Test> {
         id: RegionId::default(),
         total_population: 450,
         population_demographics: map,
-        energy_production: 1_000_000u32,
+        energy_yield: 100_000u32,
         latitude: 0u32,
         longitude: 0u32,
     }
@@ -98,36 +98,29 @@ pub(super) fn setup_test_region() {
     OmniPallet::RegionIdToRegion::set(RegionId::default(), region);
 }
 
+/// Set species data for a test
+pub(super) fn set_species_data(
+    id: JokeymonSpeciesId,
+    avg_weight: u16,
+    avg_daily_food_consumption: u16,
+    diet: Diet,
+    evolves_to: Option<JokeymonSpeciesId>,
+) {
+    OmniPallet::SpeciesIdToSpeciesData::<Test>::set(
+        id,
+        JokeymonSpeciesData {
+            id: id,
+            avg_weight: avg_weight,
+            avg_daily_food_consumption: avg_daily_food_consumption,
+            diet: diet,
+            evolves_to: evolves_to,
+        },
+    );
+}
+
 /// Sets up the species data storage
 pub(super) fn setup_test_species_data() {
-    OmniPallet::SpeciesIdToSpeciesData::<Test>::set(
-        0,
-        JokeymonSpeciesData {
-            id: 0,
-            avg_weight: 10,
-            avg_daily_food_consumption: 10,
-            diet: Diet::Herbivore,
-            evolves_to: Some(1),
-        },
-    );
-    OmniPallet::SpeciesIdToSpeciesData::<Test>::set(
-        1,
-        JokeymonSpeciesData {
-            id: 1,
-            avg_weight: 20,
-            avg_daily_food_consumption: 25,
-            diet: Diet::Herbivore,
-            evolves_to: Some(2),
-        },
-    );
-    OmniPallet::SpeciesIdToSpeciesData::<Test>::set(
-        2,
-        JokeymonSpeciesData {
-            id: 2,
-            avg_weight: 30,
-            avg_daily_food_consumption: 45,
-            diet: Diet::Carnivore,
-            evolves_to: None,
-        },
-    );
+    set_species_data(0, 10, 10, Diet::Herbivore, Some(1));
+    set_species_data(1, 20, 25, Diet::Herbivore, Some(2));
+    set_species_data(2, 30, 45, Diet::Carnivore, None);
 }

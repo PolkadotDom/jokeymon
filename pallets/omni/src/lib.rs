@@ -334,38 +334,58 @@ pub mod pallet {
             let mut carn_species_count = 0;
             let mut herb_total_count = 0;
             let mut carn_total_count = 0;
-            let mut herb_food_intake = 0;
+            let mut avg_herb_food_intake = 0;
         
             for (id, pop) in &region.population_demographics {
                 let data = SpeciesIdToSpeciesData::<T>::get(id);
                 match data.diet {
                     Diet::Herbivore => {
-                        herb_total_count += pop;
-                        herb_food_intake += pop * (data.avg_daily_food_consumption as u32);
+                        herb_total_count += *pop as i32;
+                        avg_herb_food_intake += data.avg_daily_food_consumption as i32;
                         herb_species_count += 1;
                     }
                     Diet::Carnivore => {
-                        carn_total_count += pop;
+                        carn_total_count += *pop as i32;
                         carn_species_count += 1;
                     }
                 }
             }
         
-            // Calculate carrying capacity
-            let carrying_capacity = region.energy_production / herb_food_intake;
-        
+            // Calculate carrying capacity (if herbivores exist)
+            avg_herb_food_intake = avg_herb_food_intake.checked_div(herb_species_count).unwrap_or(1);
+            let carrying_capacity = region.energy_yield / (avg_herb_food_intake as u32);
+
             // Mock params
-            let (alpha, beta, delta, gamma) = (2, 1, 1, 1);
+            let timestep = 10_000i32;
+            let (alpha, beta, delta, gamma) = (200i32, 1i32, 1i32, 200i32);
         
-            // Calculate growth or decay of each
-            let dh: i32 = ((alpha * herb_total_count)
-                * (1 - (herb_total_count / carrying_capacity))
-                - (beta * herb_total_count * carn_total_count)) as i32;
-            let dc: i32 =
-                ((delta * herb_total_count * carn_total_count) - (gamma * carn_total_count)) as i32;
-            let dh_per_species: i32 = dh / herb_species_count;
-            let dc_per_species: i32 = dc / carn_species_count;
-        
+            // Calculate growth or decay of each Lotka-Volterra (https://chatgpt.com/share/6707ea69-5cfc-8003-b153-20f2540b34fc)
+            let carry_term = Permill::one() - Permill::from_rational(herb_total_count as u32, carrying_capacity); // issue here where it can't be negative
+            let first_term_dh = carry_term.mul_ceil((alpha * herb_total_count) as u32);
+            let dh: i32 = (first_term_dh as i32) - (beta * herb_total_count * carn_total_count);
+
+            let first_term_dc = delta * herb_total_count * carn_total_count;
+            let dc: i32 = (first_term_dc as i32) - (gamma * carn_total_count);
+
+            let mut dh_per_species: i32 = dh.checked_div(herb_species_count).unwrap_or(0);
+            let mut dc_per_species: i32 = dc.checked_div(carn_species_count).unwrap_or(0);
+
+            // Divide by timestamp and clamp to -1 or 1
+            let _dh_was_positive = dh_per_species >= 0;
+            let _dc_was_positive = dc_per_species >= 0;
+            dh_per_species /= timestep;
+            dc_per_species /= timestep;
+
+            // let dh_per_species = match dh_was_positive {
+            //     true => dh_per_species.max(1),
+            //     false => dh_per_species.min(-1)
+            // };
+
+            // let dc_per_species = match dc_was_positive {
+            //     true => dc_per_species.max(1),
+            //     false => dc_per_species.min(-1)
+            // };
+
             // Build new demographics
             let mut new_demographics = BTreeMap::<u32, u32>::new();
         
