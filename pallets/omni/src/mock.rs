@@ -45,12 +45,6 @@ parameter_types! {
     pub const MaxJokeymonHoldable : u32 = 100;
 }
 
-impl bounded_collections::Get<u32> for MaxJokeymonInRegion {
-    fn get() -> u32 {
-        Self::get()
-    }
-}
-
 impl crate::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type WeightInfo = ();
