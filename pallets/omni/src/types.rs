@@ -1,9 +1,10 @@
 //! Some structs used in the omni pallet
 
+use bounded_collections::BoundedBTreeMap;
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     BoundedVec, DefaultNoBound, EqNoBound, OrdNoBound, PartialEqNoBound, PartialOrdNoBound,
-    RuntimeDebugNoBound, BoundedBTreeMap
+    RuntimeDebugNoBound,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
 use scale_info::TypeInfo;
