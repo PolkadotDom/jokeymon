@@ -1,4 +1,4 @@
-use crate::{mock::*, pallet as OmniPallet, Error, types::*};
+use crate::{mock::*, pallet as OmniPallet, types::*, Error};
 use frame_support::assert_noop;
 use sp_runtime::Permill;
 

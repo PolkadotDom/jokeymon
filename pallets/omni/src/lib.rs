@@ -25,6 +25,7 @@
 //   Update players food resources & jokeymon
 
 // Next
+// fix genesis config
 // hook that updates population dynamics in the regions
 // inherent that uses offchain function
 
@@ -54,19 +55,22 @@ pub mod pallet {
         Blake2_128Concat,
     };
     use frame_system::{pallet_prelude::*, Pallet as SystemPallet};
-    use scale_info::prelude::{vec, collections::BTreeMap};
+    use scale_info::prelude::{collections::BTreeMap, vec};
     use sp_runtime::{traits::Saturating, Permill, Vec};
+    use types::{JokeymonSpeciesData, JokeymonSpeciesId, RegionId};
 
     /// Genesis Storage
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub region_id_to_region: Vec<(RegionId, Region<T>)>,
+        pub species_id_to_data: Vec<(JokeymonSpeciesId, JokeymonSpeciesData)>,
     }
 
     impl<T: Config> Default for GenesisConfig<T> {
         fn default() -> Self {
             Self {
                 region_id_to_region: Default::default(),
+                species_id_to_data: Default::default(),
             }
         }
     }
@@ -74,9 +78,13 @@ pub mod pallet {
     #[pallet::genesis_build]
     impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
         fn build(&self) {
-            //regions
+            // Regions
             for (a, b) in &self.region_id_to_region {
                 RegionIdToRegion::<T>::insert(a, b);
+            }
+            // Species data
+            for (a, b) in &self.species_id_to_data {
+                SpeciesIdToSpeciesData::<T>::insert(a, b);
             }
         }
     }
@@ -161,9 +169,10 @@ pub mod pallet {
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
             // For each region, update it's population
-            // foreach (_, mut region) in RegionIdToRegion::<T> {
-            // Self::update_regional_population(region)
-            // }
+            for (region_id, mut region) in RegionIdToRegion::<T>::iter() {
+                Self::update_regional_population(&mut region);
+                RegionIdToRegion::<T>::insert(region_id, region);
+            }
             Weight::zero()
         }
     }
@@ -335,7 +344,7 @@ pub mod pallet {
             let mut herb_total_count = 0;
             let mut carn_total_count = 0;
             let mut avg_herb_food_intake = 0;
-        
+
             for (id, pop) in &region.population_demographics {
                 let data = SpeciesIdToSpeciesData::<T>::get(id);
                 match data.diet {
@@ -350,17 +359,20 @@ pub mod pallet {
                     }
                 }
             }
-        
+
             // Calculate carrying capacity (if herbivores exist)
-            avg_herb_food_intake = avg_herb_food_intake.checked_div(herb_species_count).unwrap_or(1);
+            avg_herb_food_intake = avg_herb_food_intake
+                .checked_div(herb_species_count)
+                .unwrap_or(1);
             let carrying_capacity = region.energy_yield / (avg_herb_food_intake as u32);
 
             // Mock params
             let timestep = 10_000i32;
             let (alpha, beta, delta, gamma) = (200i32, 1i32, 1i32, 200i32);
-        
+
             // Calculate growth or decay of each Lotka-Volterra (https://chatgpt.com/share/6707ea69-5cfc-8003-b153-20f2540b34fc)
-            let carry_term = Permill::one() - Permill::from_rational(herb_total_count as u32, carrying_capacity); // issue here where it can't be negative
+            let carry_term =
+                Permill::one() - Permill::from_rational(herb_total_count as u32, carrying_capacity); // issue here where it can't be negative
             let first_term_dh = carry_term.mul_ceil((alpha * herb_total_count) as u32);
             let dh: i32 = (first_term_dh as i32) - (beta * herb_total_count * carn_total_count);
 
@@ -388,7 +400,7 @@ pub mod pallet {
 
             // Build new demographics
             let mut new_demographics = BTreeMap::<u32, u32>::new();
-        
+
             for (id, pop) in &region.population_demographics {
                 let data = SpeciesIdToSpeciesData::<T>::get(id);
                 let new_value = match data.diet {
@@ -397,13 +409,18 @@ pub mod pallet {
                 };
                 new_demographics.insert(*id, new_value);
             }
-        
+
             // Create a new BoundedBTreeMap from the updated demographics
             let new_population_demographics =
-                bounded_collections::BoundedBTreeMap::<u32, u32, T::MaxSpeciesInRegion>::try_from(new_demographics).unwrap_or(
-                    bounded_collections::BoundedBTreeMap::<u32, u32, T::MaxSpeciesInRegion>::new()
-                );
-        
+                bounded_collections::BoundedBTreeMap::<u32, u32, T::MaxSpeciesInRegion>::try_from(
+                    new_demographics,
+                )
+                .unwrap_or(bounded_collections::BoundedBTreeMap::<
+                    u32,
+                    u32,
+                    T::MaxSpeciesInRegion,
+                >::new());
+
             // Update the region's population demographics
             region.population_demographics = new_population_demographics;
         }

@@ -1,6 +1,6 @@
 use cumulus_primitives_core::ParaId;
 use jokeymon_runtime as runtime;
-use pallet_omni::types::Region;
+use pallet_omni::types::{Diet, JokeymonSpeciesData, Region};
 use runtime::{AccountId, AuraId, Runtime as JokeymonRuntime, Signature, EXISTENTIAL_DEPOSIT};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
-    BoundedVec, Permill,
+    BoundedBTreeMap, BoundedVec, Permill,
 };
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
@@ -206,22 +206,40 @@ fn testnet_genesis(
             "regionIdToRegion": vec![
                 (0u32, Region::<JokeymonRuntime> {
                     id : 0u32,
-                    jokeymon_chances : BoundedVec::try_from(vec![(0u32, Permill::from_percent(20)),
-                    (1u32, Permill::from_percent(30)),
-                    (2u32, Permill::from_percent(50))
-                    ])
-                    .expect("Region default set up incorrectly"),
+                    total_population : 450,
+                    population_demographics : BoundedBTreeMap::try_from(BTreeMap::from(
+                    (0u32, 150),
+                    (1u32, 150),
+                    (2u32, 150),
+                    ))
+                    .expect("Demographics set up incorrectly"),
+                    energy_yield : 100_000u32,
                     latitude : 0u32,
                     longitude : 0u32,
                 }),
-                // (1u16, Chances {
-                //     jokeymon_ids : BoundedVec::try_from(vec![1u16]),
-                //     jokeymon_rates : BoundedVec::try_from(vec![1u16])
-                // }),
-                // (2u16, Chances {
-                //     jokeymon_ids : BoundedVec::try_from(vec![1u16]),
-                //     jokeymon_rates : BoundedVec::try_from(vec![1u16])
-                // }),
+                ],
+                "speciesIdToData": vec![
+                    (0u32, JokeymonSpeciesData::<JokeymonRuntime> {
+                        id: 0u32,
+                        avg_weight: 10,
+                        avg_daily_food_consumption: 10,
+                        diet: Diet::Herbivore,
+                        evolves_to: Some(1u32),
+                    }),
+                    (1u32, JokeymonSpeciesData::<JokeymonRuntime> {
+                        id: 1u32,
+                        avg_weight: 20,
+                        avg_daily_food_consumption: 25,
+                        diet: Diet::Herbivore,
+                        evolves_to: Some(2u32),
+                    }),
+                    (2u32, JokeymonSpeciesData::<JokeymonRuntime> {
+                        id: 2u32,
+                        avg_weight: 30,
+                        avg_daily_food_consumption: 45,
+                        diet: Diet::Carnivore,
+                        evolves_to: None,
+                    }),
                 ]
         }
     })
