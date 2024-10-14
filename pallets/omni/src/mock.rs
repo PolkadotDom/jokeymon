@@ -1,7 +1,6 @@
 use crate::pallet as OmniPallet;
 use crate::types::*;
-use bounded_collections::BoundedBTreeMap;
-use frame_support::{derive_impl, parameter_types, weights::constants::RocksDbWeight};
+use frame_support::{derive_impl, parameter_types, weights::constants::RocksDbWeight, BoundedBTreeMap};
 use frame_system::mocking::MockBlock;
 use sp_runtime::{traits::ConstU64, BuildStorage};
 
@@ -71,12 +70,12 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 // ----- HELPERS -----
 
 /// Mock a test jokeymon region
-pub(super) fn get_test_region() -> Region<Test> {
-    let mut map = BoundedBTreeMap::new();
+pub(super) fn get_test_region<T: crate::Config>() -> Region<T> {
+    let mut map: BoundedBTreeMap<JokeymonSpeciesId, JokeymonCount, T::MaxSpeciesInRegion> = BoundedBTreeMap::new();
     map.try_insert(0u32, 150).unwrap();
     map.try_insert(1u32, 150).unwrap();
     map.try_insert(2u32, 150).unwrap();
-    Region::<Test> {
+    Region::<T> {
         id: RegionId::default(),
         total_population: 450,
         population_demographics: map,
@@ -88,7 +87,7 @@ pub(super) fn get_test_region() -> Region<Test> {
 
 /// Set test region in memory
 pub(super) fn setup_test_region() {
-    let region = get_test_region();
+    let region = get_test_region::<Test>();
     OmniPallet::RegionIdToRegion::set(RegionId::default(), region);
 }
 

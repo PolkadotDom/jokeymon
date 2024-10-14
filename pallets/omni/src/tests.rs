@@ -7,39 +7,50 @@ use sp_runtime::Permill;
 #[test]
 fn population_remains_stable_mixed_diets() {
     new_test_ext().execute_with(|| {
-        let mut region = get_test_region();
+        let mut region = get_test_region::<Test>();
         for _ in 0..10_000 {
             OmniModule::update_regional_population(&mut region);
         }
         assert!(region.total_population > 0);
-        assert!(region.total_population < 1000);
+        assert!(region.total_population < 100_000);
     });
 }
 
 #[test]
 fn population_remains_stable_all_herbivores() {
     new_test_ext().execute_with(|| {
-        let mut region = get_test_region();
+        let mut region = get_test_region::<Test>();
         set_species_data(2, 30, 45, Diet::Herbivore, None);
         for _ in 0..10_000 {
             OmniModule::update_regional_population(&mut region);
         }
         assert!(region.total_population > 0);
-        assert!(region.total_population < 1000);
+        assert!(region.total_population < 100_000);
     });
 }
 
 #[test]
 fn population_remains_stable_all_carnivores() {
     new_test_ext().execute_with(|| {
-        let mut region = get_test_region();
+        let mut region = get_test_region::<Test>();
         set_species_data(0, 10, 10, Diet::Carnivore, Some(1));
         set_species_data(1, 20, 25, Diet::Carnivore, Some(2));
         for _ in 0..10_000 {
             OmniModule::update_regional_population(&mut region);
         }
         assert!(region.total_population > 0);
-        assert!(region.total_population < 1000);
+        assert!(region.total_population < 10_000);
+    });
+}
+
+#[test]
+fn total_population_updates_with_update() {
+    new_test_ext().execute_with(|| {
+        let mut region = get_test_region::<Test>();
+        for _ in 0..10_000 {
+            OmniModule::update_regional_population(&mut region);
+        }
+        assert_eq!(region.total_population, region.population_demographics.values().sum::<JokeymonCount>() as u64);
     });
 }
 

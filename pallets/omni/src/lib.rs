@@ -51,8 +51,7 @@ pub mod pallet {
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
         traits::{BuildGenesisConfig, Randomness},
-        Blake2_128Concat,
-        BoundedBTreeMap,
+        Blake2_128Concat, BoundedBTreeMap,
     };
     use frame_system::{pallet_prelude::*, Pallet as SystemPallet};
     use scale_info::prelude::{collections::BTreeMap, vec};
@@ -388,17 +387,8 @@ pub mod pallet {
             dh_per_species /= timestep;
             dc_per_species /= timestep;
 
-            // let dh_per_species = match dh_was_positive {
-            //     true => dh_per_species.max(1),
-            //     false => dh_per_species.min(-1)
-            // };
-
-            // let dc_per_species = match dc_was_positive {
-            //     true => dc_per_species.max(1),
-            //     false => dc_per_species.min(-1)
-            // };
-
             // Build new demographics
+            let mut new_total_count = 0;
             let mut new_demographics = BTreeMap::<u32, u32>::new();
 
             for (id, pop) in &region.population_demographics {
@@ -408,21 +398,17 @@ pub mod pallet {
                     Diet::Carnivore => (*pop as i32 + dc_per_species).max(0) as u32,
                 };
                 new_demographics.insert(*id, new_value);
+                new_total_count += new_value as u64;
             }
 
             // Create a new BoundedBTreeMap from the updated demographics
             let new_population_demographics =
-                BoundedBTreeMap::<u32, u32, T::MaxSpeciesInRegion>::try_from(
-                    new_demographics,
-                )
-                .unwrap_or(BoundedBTreeMap::<
-                    u32,
-                    u32,
-                    T::MaxSpeciesInRegion,
-                >::new());
+                BoundedBTreeMap::<u32, u32, T::MaxSpeciesInRegion>::try_from(new_demographics)
+                    .unwrap_or(BoundedBTreeMap::<u32, u32, T::MaxSpeciesInRegion>::new());
 
             // Update the region's population demographics
             region.population_demographics = new_population_demographics;
+            region.total_population = new_total_count;
         }
     }
 }

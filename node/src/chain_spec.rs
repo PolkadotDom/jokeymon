@@ -1,6 +1,8 @@
+use std::collections::BTreeMap;
+
 use cumulus_primitives_core::ParaId;
 use jokeymon_runtime as runtime;
-use pallet_omni::types::{Diet, JokeymonSpeciesData, Region};
+use pallet_omni::types::{Diet, JokeymonCount, JokeymonSpeciesData, JokeymonSpeciesId, Region};
 use runtime::{AccountId, AuraId, Runtime as JokeymonRuntime, Signature, EXISTENTIAL_DEPOSIT};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
@@ -8,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
-    BoundedBTreeMap, BoundedVec, Permill,
+    BoundedBTreeMap,
 };
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
@@ -64,6 +66,17 @@ where
 /// The input must be a tuple of individual keys (a single arg for now since we have just one key).
 pub fn template_session_keys(keys: AuraId) -> runtime::SessionKeys {
     runtime::SessionKeys { aura: keys }
+}
+
+/// Helper to generate demographics data
+pub fn demographics_data<T: pallet_omni::Config>(
+    data: Vec<(JokeymonSpeciesId, JokeymonCount)>,
+) -> BoundedBTreeMap<JokeymonSpeciesId, JokeymonCount, T::MaxSpeciesInRegion> {
+    let mut map = BTreeMap::new();
+    for (k, v) in data {
+        map.insert(k, v);
+    }
+    BoundedBTreeMap::try_from(map).expect("Issue creating BoundedBTreeMap in demographics data")
 }
 
 pub fn development_config() -> ChainSpec {
@@ -207,33 +220,34 @@ fn testnet_genesis(
                 (0u32, Region::<JokeymonRuntime> {
                     id : 0u32,
                     total_population : 450,
-                    population_demographics : BoundedBTreeMap::try_from(BTreeMap::from(
-                    (0u32, 150),
-                    (1u32, 150),
-                    (2u32, 150),
-                    ))
-                    .expect("Demographics set up incorrectly"),
+                    population_demographics : demographics_data::<JokeymonRuntime> (
+                    vec![
+                    (0u32, 150u32),
+                    (1u32, 150u32),
+                    (2u32, 150u32),
+                    ]
+                    ),
                     energy_yield : 100_000u32,
                     latitude : 0u32,
                     longitude : 0u32,
                 }),
                 ],
                 "speciesIdToData": vec![
-                    (0u32, JokeymonSpeciesData::<JokeymonRuntime> {
+                    (0u32, JokeymonSpeciesData {
                         id: 0u32,
                         avg_weight: 10,
                         avg_daily_food_consumption: 10,
                         diet: Diet::Herbivore,
                         evolves_to: Some(1u32),
                     }),
-                    (1u32, JokeymonSpeciesData::<JokeymonRuntime> {
+                    (1u32, JokeymonSpeciesData {
                         id: 1u32,
                         avg_weight: 20,
                         avg_daily_food_consumption: 25,
                         diet: Diet::Herbivore,
                         evolves_to: Some(2u32),
                     }),
-                    (2u32, JokeymonSpeciesData::<JokeymonRuntime> {
+                    (2u32, JokeymonSpeciesData {
                         id: 2u32,
                         avg_weight: 30,
                         avg_daily_food_consumption: 45,

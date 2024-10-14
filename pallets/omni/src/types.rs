@@ -2,8 +2,8 @@
 
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
-    BoundedVec, DefaultNoBound, EqNoBound, OrdNoBound, PartialEqNoBound, PartialOrdNoBound,
-    RuntimeDebugNoBound, BoundedBTreeMap,
+    BoundedBTreeMap, BoundedVec, DefaultNoBound, EqNoBound, OrdNoBound, PartialEqNoBound,
+    PartialOrdNoBound, RuntimeDebugNoBound,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
 use scale_info::TypeInfo;
@@ -16,10 +16,11 @@ pub type Coordinate = u32;
 // jokeymon
 pub type JokeymonSpeciesId = u32; // species identifier
 pub type JokeymonId = u64; // individual identifier
+pub type JokeymonCount = u32;
 
 // population size by jokeymon id
 pub type RegionPopulationDemographics<T> =
-    BoundedBTreeMap<JokeymonSpeciesId, u32, <T as crate::Config>::MaxSpeciesInRegion>;
+    BoundedBTreeMap<JokeymonSpeciesId, JokeymonCount, <T as crate::Config>::MaxSpeciesInRegion>;
 
 /// A jokeymon diet type
 #[derive(
