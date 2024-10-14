@@ -47,17 +47,16 @@ mod benchmarking;
 #[frame_support::pallet]
 pub mod pallet {
     use crate::types::*;
-    use bounded_collections::Get as BGet;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
         traits::{BuildGenesisConfig, Randomness},
         Blake2_128Concat,
+        BoundedBTreeMap,
     };
     use frame_system::{pallet_prelude::*, Pallet as SystemPallet};
     use scale_info::prelude::{collections::BTreeMap, vec};
     use sp_runtime::{traits::Saturating, Permill, Vec};
-    use types::{JokeymonSpeciesData, JokeymonSpeciesId, RegionId};
 
     /// Genesis Storage
     #[pallet::genesis_config]
@@ -101,8 +100,8 @@ pub mod pallet {
         /// A source of randomness
         type RandomSource: Randomness<Self::Hash, BlockNumberFor<Self>>;
 
-        /// Maximum amount of Jokeymon species allowed in a region (BGet while waiting on sdk merge)
-        type MaxSpeciesInRegion: Get<u32> + BGet<u32>;
+        /// Maximum amount of Jokeymon species allowed in a region
+        type MaxSpeciesInRegion: Get<u32>;
 
         /// Maximum jokeymon an account can hold at a time
         type MaxJokeymonHoldable: Get<u32>;
@@ -314,6 +313,7 @@ pub mod pallet {
         }
 
         /// Increments the population size of a jokeymon in a region
+        #[allow(dead_code)]
         pub(super) fn increment_species_in_population(
             region: &mut Region<T>,
             id: JokeymonSpeciesId,
@@ -412,10 +412,10 @@ pub mod pallet {
 
             // Create a new BoundedBTreeMap from the updated demographics
             let new_population_demographics =
-                bounded_collections::BoundedBTreeMap::<u32, u32, T::MaxSpeciesInRegion>::try_from(
+                BoundedBTreeMap::<u32, u32, T::MaxSpeciesInRegion>::try_from(
                     new_demographics,
                 )
-                .unwrap_or(bounded_collections::BoundedBTreeMap::<
+                .unwrap_or(BoundedBTreeMap::<
                     u32,
                     u32,
                     T::MaxSpeciesInRegion,
