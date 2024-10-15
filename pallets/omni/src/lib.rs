@@ -25,8 +25,8 @@
 //   Update players food resources & jokeymon
 
 // Next
-// implement a runtime api
-// inherent that uses offchain function
+// inherent 
+// offchain function
 // use try-runtime for something
 
 pub use pallet::*;
