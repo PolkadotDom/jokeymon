@@ -25,24 +25,29 @@
 //   Update players food resources & jokeymon
 
 // Next
-// fix genesis config
-// hook that updates population dynamics in the regions
+// implement a runtime api
 // inherent that uses offchain function
+// use try-runtime for something
 
 pub use pallet::*;
-
 pub mod types;
-
 #[cfg(test)]
 mod mock;
-
 #[cfg(test)]
 mod tests;
-
 pub mod weights;
+// pub mod apis;
+// pub use apis::OmniPalletApi;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+
+// A mock api for learning
+sp_api::decl_runtime_apis! {
+    pub trait OmniPalletApi {
+        fn three() -> bool;
+    }
+}
 
 #[frame_support::pallet]
 pub mod pallet {

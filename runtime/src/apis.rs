@@ -64,6 +64,12 @@ impl Runtime {
 }
 
 impl_runtime_apis! {
+    impl pallet_omni::OmniPalletApi<Block> for Runtime {
+        fn three() -> bool {
+            1u32 == 1u32
+        }
+    }
+
     impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
         fn slot_duration() -> sp_consensus_aura::SlotDuration {
             Runtime::impl_slot_duration()

@@ -23,6 +23,7 @@ frame-benchmarking = { optional = true, workspace = true }
 frame-support.workspace = true
 frame-system.workspace = true
 sp-runtime.workspace = true
+sp-api.workspace = true
 
 # pallets
 pallet-insecure-randomness-collective-flip.workspace = true
